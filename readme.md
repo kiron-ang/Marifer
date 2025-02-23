@@ -15,9 +15,9 @@ tfds build qm9/original
 ```
 
 ## Analyze and Parse the QM9 Dataset
-The last command from the previous section instructs the computer to build the QM9 dataset hosted by Tensorflow. [You can learn more about it on their website.](https://www.tensorflow.org/datasets/catalog/qm9). To analyze the dataset for basic information and patterns, please use the Python programming language as demonstrated in the ``analyze.py`` file in this repository. It illustrates how to save several PNG figures without needing to convert the QM9 dataset into graphs.
+The last command from the previous section instructs the computer to build the QM9 dataset hosted by Tensorflow. [You can learn more about it on their website.](https://www.tensorflow.org/datasets/catalog/qm9). To analyze the dataset for basic information and patterns, please use the Python programming language as demonstrated in the ``analyze.py`` file in this repository. It illustrates how to save several PNG figures into the ``analyze`` directory without needing to convert the QM9 molecules into graphs.
 
-Additionally, the dataset must be processed to obtain molecular graph representations. [The QM9 dataset uses the "SMILES" system to represent molecular structures as strings.](https://pubs.acs.org/doi/abs/10.1021/ci00057a005) To parse these strings into adjacency lists, please see the ``parse.py`` file in this repository.
+Additionally, the dataset must be processed to obtain molecular graph representations. [The QM9 dataset uses the "SMILES" system to represent molecular structures as strings.](https://pubs.acs.org/doi/abs/10.1021/ci00057a005) To parse these strings into adjacency lists, please see the ``parse.py`` file in this repository. It creates a new data file stored in the ``parse`` directory.
 
 ## Train the Marifer Model
 

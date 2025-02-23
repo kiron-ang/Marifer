@@ -36,7 +36,7 @@ plt.ylabel("Frequency")
 plt.title(f"Distribution of Molecule Sizes in QM9 Dataset ({total_molecules} molecules)")
 
 # Save the figure
-plt.savefig("qm9_nodes_distribution.png", dpi = 800)
+plt.savefig("analyze/qm9_nodes_distribution.png", dpi = 800)
 
 
 number_of_nodes_each_molecule_has_dictionary = {}
@@ -48,7 +48,7 @@ for number in number_of_nodes_each_molecule_has:
     else:
         number_of_nodes_each_molecule_has_dictionary[number] = 1
 
-with open("qm9_nodes_distribution.csv", "w", newline="") as csvfile:
+with open("analyze/qm9_nodes_distribution.csv", "w", newline="") as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["Number of atoms", "Number of molecules with that number of atoms", "Percentage (%)"])
     for number, count in number_of_nodes_each_molecule_has_dictionary.items():
