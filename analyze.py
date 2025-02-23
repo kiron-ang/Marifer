@@ -29,12 +29,15 @@ for molecule in train:
 plt.hist(number_of_nodes_each_molecule_has)
 
 # Add labels and title to the plot
-plt.xlabel('Number of Atoms')
-plt.ylabel('Frequency')
-plt.title('Distribution of Molecule Sizes in QM9 Dataset')
+total_molecules = len(number_of_nodes_each_molecule_has)
+
+plt.xlabel("Number of Atoms (Number of Nodes)")
+plt.ylabel("Frequency")
+plt.title(f"Distribution of Molecule Sizes in QM9 Dataset ({total_molecules} molecules)")
 
 # Save the figure
-plt.savefig('qm9_molecule_size_distribution.png', dpi = 800)
+plt.savefig("qm9_nodes_distribution.png", dpi = 800)
+
 
 number_of_nodes_each_molecule_has_dictionary = {}
 
@@ -45,8 +48,9 @@ for number in number_of_nodes_each_molecule_has:
     else:
         number_of_nodes_each_molecule_has_dictionary[number] = 1
 
-with open('qm9_molecule_size_distribution.csv', 'w', newline='') as csvfile:
+with open("qm9_nodes_distribution.csv", "w", newline="") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(['Number of atoms', 'Number of molecules with that number of atoms'])
+    writer.writerow(["Number of atoms", "Number of molecules with that number of atoms", "Percentage (%)"])
     for number, count in number_of_nodes_each_molecule_has_dictionary.items():
-        writer.writerow([number, count])
+        percentage = (count / total_molecules) * 100
+        writer.writerow([number, count, percentage])
