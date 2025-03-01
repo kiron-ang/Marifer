@@ -6,14 +6,12 @@ Launch Anaconda Prompt to begin! Then, enter these commands:
 ```
 conda create -y -n=Marifer python=3.11
 conda activate Marifer
-
-pip install tensorflow tfds-nightly mlcroissant apache_beam pandas seaborn scipy jinja2
-
+pip install tensorflow tfds-nightly matplotlib
 tfds build qm9/original
 ```
 
 ## Visualize QM9
-The last command from the previous section instructs the computer to build the QM9 dataset hosted by Tensorflow. [You can learn more about it on their website.](https://www.tensorflow.org/datasets/catalog/qm9). To analyze the dataset with data visualizations, please use the Python programming language as demonstrated in the ``visualization.py`` file in this repository. It illustrates how to save several PNG figures into the ``visualization`` directory without needing to convert the QM9 molecules into graphs or some other intermediate structure.
+The last command from the previous section instructs the computer to build the QM9 dataset hosted by Tensorflow. [You can learn more about it on their website.](https://www.tensorflow.org/datasets/catalog/qm9). To analyze the dataset with data visualizations, please use the Python programming language as demonstrated in the ``visualization.py`` file in this repository. It illustrates how to save several PNG figures into the ``visualizations`` directory without needing to convert the QM9 molecules into graphs or some other intermediate structure.
 
 ## Train Marifer
 
