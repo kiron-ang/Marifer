@@ -2,19 +2,26 @@
 Molecular Generation with Deep Learning, Graph Representations, and the QM9 Dataset!
 
 ## Conda Environment
-Launch Anaconda Prompt to begin! Then, enter these commands:
+[Ensure that Miniconda is installed](https://www.anaconda.com/docs/getting-started/miniconda/install). Then, enter these commands:
 ```
 conda create -y -n=Marifer python=3.11
 conda activate Marifer
 pip install tensorflow tfds-nightly matplotlib
+```
+
+## Build QM9
+This project uses the QM9 dataset hosted by Tensorflow. [You can learn more about it on their website.](https://www.tensorflow.org/datasets/catalog/qm9). After setting up your conda environment, enter this command to build QM9:
+```
 tfds build qm9/original
 ```
 
-## Visualize QM9
-The last command from the previous section instructs the computer to build the QM9 dataset hosted by Tensorflow. [You can learn more about it on their website.](https://www.tensorflow.org/datasets/catalog/qm9). To analyze the dataset with data visualizations, please use the Python programming language as demonstrated in the ``visualization.py`` file in this repository. It illustrates how to save several PNG figures into the ``visualizations`` directory without needing to convert the QM9 molecules into graphs or some other intermediate structure.
-
 ## Train Marifer
-
+Train the model by executing the Python script in this repository. Enter these commands:
+```
+git clone https://github.com/kiron-ang/Marifer.git
+cd Marifer
+python model.py
+```
 
 ## Scientific Literature
 Honestly, I am not well-versed in molecular generation. So, I have to read academic articles to supplement my current knowledge. Below, I summarize some articles I have found online:
