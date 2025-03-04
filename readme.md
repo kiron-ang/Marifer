@@ -1,26 +1,24 @@
 # Marifer
 Molecular Generation with Deep Learning, Graph Representations, and the QM9 Dataset!
 
-## Conda Environment
-[Ensure that Miniconda is installed](https://www.anaconda.com/docs/getting-started/miniconda/install). Then, enter these commands:
+## Project Cloning
+[Ensure that uv is installed](https://docs.astral.sh/uv). Then, enter these commands:
 ```
-conda create -y -n=Marifer python=3.11
-conda activate Marifer
-pip install tensorflow tfds-nightly matplotlib
+git clone https://github.com/kiron-ang/Marifer.git
+cd Marifer
 ```
 
-## Build QM9
+## QM9 Dataset
 This project uses the QM9 dataset hosted by Tensorflow. [You can learn more about it on their website.](https://www.tensorflow.org/datasets/catalog/qm9). After setting up your conda environment, enter this command to build QM9:
 ```
 tfds build qm9/original
 ```
 
-## Train Marifer
-Train the model by executing the Python script in this repository. Enter these commands:
+## Model Training
+Train the Marifer model by executing the Python script in this repository. Enter these commands:
 ```
-git clone https://github.com/kiron-ang/Marifer.git
 cd Marifer
-python model.py
+uv run model.py
 ```
 
 ## Scientific Literature
