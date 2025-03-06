@@ -74,7 +74,7 @@ def preprocess_data(data):
             input_data.append(example[feature])
 
         # Process SMILES string (if available)
-        smiles = example['SMILES']
+        smiles = example['SMILES'].numpy().decode()
         smiles_fingerprint = smiles_to_fingerprint(smiles)
         input_data.extend(smiles_fingerprint)  # Append the fingerprint to the feature vector
 

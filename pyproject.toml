@@ -5,7 +5,9 @@ description = "PLACEHOLDER"
 requires-python = ">=3.11"
 dependencies = [
     "apache-beam>=2.63.0",
+    "matplotlib>=3.10.1",
     "mlcroissant>=1.0.14",
+    "rdkit>=2024.9.5",
     "tensorflow>=2.18.0",
     "tfds-nightly>=4.9.7.dev202503060044",
 ]
