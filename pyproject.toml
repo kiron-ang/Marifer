@@ -1,8 +1,7 @@
 [project]
-name = "testing"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+name = "Marifer"
+version = "0.0.1"
+description = "PLACEHOLDER"
 requires-python = ">=3.11"
 dependencies = [
     "apache-beam>=2.63.0",
