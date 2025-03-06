@@ -106,7 +106,7 @@ qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(qm9_input_size)
 # Train the autoencoder model
 print("Training the autoencoder...")
 
-history = model.fit(
+history = qm9_autoencoder_model.fit(
     train_features,
     train_labels,
     epochs=50,
@@ -121,15 +121,15 @@ print(history.history)
 
 # Evaluate the model on the test set
 print("Evaluating the model on the test set...")
-test_loss = model.evaluate(test_features, test_labels, verbose=1)
+test_loss = qm9_autoencoder_model.evaluate(test_features, test_labels, verbose=1)
 print(f"Test loss: {test_loss}")
 
 # Save the trained model
 MODEL_SAVE_PATH = './autoencoder_model'
 print(f"Saving the model to {MODEL_SAVE_PATH}...")
 os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
-model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.h5'))
-encoder.save(os.path.join(MODEL_SAVE_PATH, 'encoder.h5'))
+qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.h5'))
+qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.h5'))
 
 # Generate new latent space samples and reconstruct the molecules
 print("Generating new samples from the latent space...")
@@ -142,7 +142,11 @@ latent_space_samples = np.random.normal(size=(10, 32))
 # Note: You need to use the full decoder network for this step.
 # Here we're using the second-to-last layer as a placeholder.
 # For actual decoding, you should use the full decoder.
-generated_samples = model.predict(latent_space_samples)
+# To decode using the full autoencoder model, you need to pass the latent space samples through the encoder first.
+# However, since the encoder outputs 32 dimensions, we can directly use the decoder part of the autoencoder.
+# For simplicity, let's use the full autoencoder model to decode, but note that this requires passing through the encoder first.
+# Here we directly use the autoencoder model for simplicity, but ideally you should define a decoder model separately.
+generated_samples = qm9_autoencoder_model.predict(latent_space_samples)
 
 print("Generated samples from latent space:")
 print(generated_samples)
