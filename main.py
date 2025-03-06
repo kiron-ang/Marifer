@@ -14,7 +14,7 @@ print(f"Python version: {sys.version}")
 
 # Load the QM9 dataset
 print("Loading QM9 dataset...")
-dataset, info = tfds.load('qm9/original', with_info=True, as_supervised=False)
+dataset, info = tfds.load('qm9/dimenet', with_info=True, as_supervised=False)
 
 # Split the dataset into train, test, and validation datasets
 train_data = dataset['train']
