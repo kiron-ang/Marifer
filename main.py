@@ -15,38 +15,38 @@ train_data = dataset['train']
 test_data = dataset['test']
 validation_data = dataset['validation']
 
-features_of_interest = [
-'A',
-'B',
-'C',
-'Cv',
-'G',
-'G_atomization',
-'H',
-'H_atomization',
-'InChI',
-'InChI_relaxed',
-'Mulliken_charges',
-'SMILES',
-'SMILES_relaxed',
-'U',
-'U0',
-'U0_atomization',
-'U_atomization',
-'alpha',
-'charges',
-'frequencies',
-'gap',
-'homo',
-'index',
-'lumo',
-'mu',
-'num_atoms',
-'positions',
-'r2',
-'tag',
-'zpve'
-]
+features_of_interest = {
+    'A': float32,
+    'B': float32,
+    'C': float32,
+    'Cv': float32,
+    'G': float32,
+    'G_atomization': float32,
+    'H': float32,
+    'H_atomization': float32,
+    # 'InChI': string,
+    # 'InChI_relaxed': string,
+    # 'Mulliken_charges': Tensor(shape=(29,), dtype=float32),
+    # 'SMILES': string,
+    # 'SMILES_relaxed': string,
+    'U': float32,
+    'U0': float32,
+    'U0_atomization': float32,
+    'U_atomization': float32,
+    'alpha': float32,
+    # 'charges': Tensor(shape=(29,), dtype=int64),
+    # 'frequencies': Tensor(shape=(None,), dtype=float32),
+    'gap': float32,
+    'homo': float32,
+    'index': int64,
+    'lumo': float32,
+    'mu': float32,
+    'num_atoms': int64,
+    # 'positions': Tensor(shape=(29, 3), dtype=float32),
+    'r2': float32,
+    # 'tag': string,
+    'zpve': float32,
+}
 
 
 def preprocess_data(data):
@@ -68,7 +68,7 @@ def preprocess_data(data):
     for example in data:
         # Extract scalar features
         input_data = []
-        for feature in features_of_interest:
+        for feature in features_of_interest.keys():
             input_data.append(example[feature])
 
         # For autoencoding, the output is the same as input
@@ -143,6 +143,15 @@ history = qm9_autoencoder_model.fit(
 # Print the training history to monitor the performance
 print("Training complete. Here's the training history:")
 print(history.history)
+
+# Plot Loss vs Epochs
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Loss vs Epochs')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.savefig('./figures/loss_vs_epochs.png', dpi=800)
 
 # Evaluate the model on the test set
 print("Evaluating the model on the test set...")
