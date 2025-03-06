@@ -1,8 +1,6 @@
 """
 Train an autoencoder on the QM9 dataset.
 """
-import os
-import sys
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
@@ -150,19 +148,15 @@ print("Evaluating the model on the test set...")
 test_loss = qm9_autoencoder_model.evaluate(test_features, test_labels, verbose=1)
 print(f"Test loss: {test_loss}")
 
-"""
 # Save the trained model
-MODEL_SAVE_PATH = './autoencoder_model'
+MODEL_SAVE_PATH = './model'
 print(f"Saving the model to {MODEL_SAVE_PATH}...")
 os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.keras'))
 qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.keras'))
-"""
 
 print("Reconstructing samples from the latent space...")
-# To reconstruct, simply use the autoencoder model
 reconstructed_samples = qm9_autoencoder_model.predict(train_features)
 
-print("Comparison of first entries:")
-print(train_features[0])
-print(reconstructed_samples[0])
+print(train_features[10])
+print(reconstructed_samples[10])
