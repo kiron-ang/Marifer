@@ -7,10 +7,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-# Print the name of the script and the Python version
-print(f"Running script: {sys.argv[0]}")
-print(f"Python version: {sys.version}")
-
 # Load the QM9 dataset
 print("Loading QM9 dataset...")
 dataset, info = tfds.load('qm9/dimenet', with_info=True, as_supervised=False)
@@ -19,6 +15,40 @@ dataset, info = tfds.load('qm9/dimenet', with_info=True, as_supervised=False)
 train_data = dataset['train']
 test_data = dataset['test']
 validation_data = dataset['validation']
+
+features_of_interest = [
+'A',
+'B',
+'C',
+'Cv',
+'G',
+'G_atomization',
+'H',
+'H_atomization',
+'InChI',
+'InChI_relaxed',
+'Mulliken_charges',
+'SMILES',
+'SMILES_relaxed',
+'U',
+'U0',
+'U0_atomization',
+'U_atomization',
+'alpha',
+'charges',
+'frequencies',
+'gap',
+'homo',
+'index',
+'lumo',
+'mu',
+'num_atoms',
+'positions',
+'r2',
+'tag',
+'zpve'
+]
+
 
 def preprocess_data(data):
     """
@@ -38,29 +68,9 @@ def preprocess_data(data):
     # Iterate through the dataset
     for example in data:
         # Extract scalar features
-        input_data = [
-            example['A'],
-            example['B'],
-            example['C'],
-            example['Cv'],
-            example['G'],
-            example['G_atomization'],
-            example['H'],
-            example['H_atomization'],
-            example['U'],
-            example['U0'],
-            example['U0_atomization'],
-            example['U_atomization'],
-            example['alpha'],
-            example['gap'],
-            example['homo'],
-            example['index'],
-            example['lumo'],
-            example['mu'],
-            example['num_atoms'],
-            example['r2'],
-            example['zpve'],
-        ]
+        input_data = []
+        for feature in features_of_interest:
+            input_data.append(example[feature])
 
         # For autoencoding, the output is the same as input
         features.append(input_data)
@@ -117,7 +127,7 @@ def build_autoencoder(input_size):
     return autoencoder, encoder
 
 # Build the autoencoder with the new input size
-qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(21)
+qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(len(features_of_interest))
 
 # Train the autoencoder model
 print("Training the autoencoder...")
@@ -140,12 +150,14 @@ print("Evaluating the model on the test set...")
 test_loss = qm9_autoencoder_model.evaluate(test_features, test_labels, verbose=1)
 print(f"Test loss: {test_loss}")
 
+"""
 # Save the trained model
 MODEL_SAVE_PATH = './autoencoder_model'
 print(f"Saving the model to {MODEL_SAVE_PATH}...")
 os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.keras'))
 qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.keras'))
+"""
 
 print("Reconstructing samples from the latent space...")
 # To reconstruct, simply use the autoencoder model
