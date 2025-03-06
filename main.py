@@ -1,3 +1,6 @@
+"""
+Train an autoencoder on the QM9 dataset!
+"""
 import os
 import sys
 import numpy as np
@@ -114,7 +117,7 @@ def build_autoencoder(input_size):
     return model, encoder
 
 # Determine the new input size based on the number of scalar features
-new_input_size = len([
+NEW_INPUT_SIZE = len([
     'A',
     'B',
     'C',
@@ -139,7 +142,7 @@ new_input_size = len([
 ])
 
 # Build the autoencoder with the new input size
-qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(new_input_size)
+qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(NEW_INPUT_SIZE)
 
 # Train the autoencoder model
 print("Training the autoencoder...")
