@@ -138,14 +138,6 @@ print("Generating new samples from the latent space...")
 # 10 new random samples with 32 dimensions
 latent_space_samples = np.random.normal(size=(10, 32))
 
-# Decode the random latent space samples back to the original data
-# Note: You need to use the full decoder network for this step.
-# Here we're using the second-to-last layer as a placeholder.
-# For actual decoding, you should use the full decoder.
-# To decode using the full autoencoder model, you need to pass the latent space samples through the encoder first.
-# However, since the encoder outputs 32 dimensions, we can directly use the decoder part of the autoencoder.
-# For simplicity, let's use the full autoencoder model to decode, but note that this requires passing through the encoder first.
-# Here we directly use the autoencoder model for simplicity, but ideally you should define a decoder model separately.
 generated_samples = qm9_autoencoder_model.predict(latent_space_samples)
 
 print("Generated samples from latent space:")
