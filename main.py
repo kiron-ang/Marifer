@@ -144,12 +144,13 @@ print(f"Test loss: {test_loss}")
 MODEL_SAVE_PATH = './autoencoder_model'
 print(f"Saving the model to {MODEL_SAVE_PATH}...")
 os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
-qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.h5'))
-qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.h5'))
+qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.keras'))
+qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.keras'))
 
 print("Reconstructing samples from the latent space...")
 # To reconstruct, simply use the autoencoder model
 reconstructed_samples = qm9_autoencoder_model.predict(train_features)
 
-print("Reconstructed samples from latent space:")
-print(reconstructed_samples)
+print("Comparison of first entries:")
+print(train_features[0])
+print(reconstructed_samples[0])
