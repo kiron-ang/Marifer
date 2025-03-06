@@ -100,8 +100,8 @@ def build_autoencoder(input_size):
     return model, encoder
 
 # Build the autoencoder
-input_size = train_features.shape[1]
-model, encoder = build_autoencoder(input_size)
+qm9_input_size = train_features.shape[1]
+qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(qm9_input_size)
 
 # Train the autoencoder model
 print("Training the autoencoder...")
