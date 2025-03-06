@@ -18,7 +18,7 @@ train_data = dataset['train']
 test_data = dataset['test']
 validation_data = dataset['validation']
 
-features_of_interest = {
+qm9_numeric_features = {
     'A': 'float32',
     'B': 'float32',
     'C': 'float32',
@@ -70,14 +70,14 @@ def preprocess_data(data):
         input_data = []
 
         # Process numeric features
-        for feature in features_of_interest:
+        for feature in qm9_numeric_features:
             input_data.append(example[feature])
 
         # Process SMILES string (if available)
         smiles = example['SMILES']
         smiles_fingerprint = smiles_to_fingerprint(smiles)
         input_data.extend(smiles_fingerprint)  # Append the fingerprint to the feature vector
-        
+
         # For autoencoding, the output is the same as input
         features.append(input_data)
         labels.append(input_data)
@@ -133,11 +133,11 @@ def build_autoencoder(input_size):
     return autoencoder, encoder
 
 # Calculate the new input size by adding the SMILES fingerprint length
-smiles_fingerprint_length = 2048  # Length of the fingerprint
-input_size = len(features_of_interest) + smiles_fingerprint_length
+SMILES_FINGERPRINT_LENGTH = 2048  # Length of the fingerprint
+QM9_INPUT_SIZE = len(qm9_numeric_features) + SMILES_FINGERPRINT_LENGTH
 
 # Build the autoencoder with the new input size
-qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(input_size)
+qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(QM9_INPUT_SIZE)
 
 # Train the autoencoder model
 print("Training the autoencoder...")
@@ -170,11 +170,8 @@ test_loss = qm9_autoencoder_model.evaluate(test_features, test_labels, verbose=1
 print(f"Test loss: {test_loss}")
 
 # Save the trained model
-MODEL_SAVE_PATH = './model'
-print(f"Saving the model to {MODEL_SAVE_PATH}...")
-os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
-qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.keras'))
-qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.keras'))
+qm9_autoencoder_model.save('models/autoencoder.keras')
+qm9_encoder_model.save('models/encoder.keras')
 
 # Reconstructing samples from the latent space
 print("Reconstructing samples from the latent space...")
