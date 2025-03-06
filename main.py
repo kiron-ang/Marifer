@@ -1,13 +1,15 @@
 """
 Train an autoencoder on the QM9 dataset.
 """
-import os
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 from rdkit import Chem
 from rdkit.Chem import AllChem
+from rdkit import rdBase
+
+rdBase.DisableLog('rdApp.warning')
 
 # Load the QM9 dataset
 print("Loading QM9 dataset...")
