@@ -24,10 +24,10 @@ validation_data = dataset['validation']
 def preprocess_data(data):
     """
     Preprocess the dataset by concatenating positions and charges into input features.
-    
+
     Parameters:
     - data: The dataset to preprocess.
-    
+
     Returns:
     - features: Concatenated input features.
     - labels: Same as features for autoencoding.
@@ -35,23 +35,23 @@ def preprocess_data(data):
     print("Preprocessing data...")
     features = []
     labels = []
-    
+
     # Iterate through the dataset
     for example in data:
         # Extract the 'positions' (3D coordinates of atoms) and 'charges' (atomic charges) features
         positions = example['positions']  # Shape: (29, 3)
         charges = example['charges']  # Shape: (29,)
-        
+
         # Concatenate both 'positions' and 'charges' as input features for the autoencoder
         input_data = np.concatenate([positions.flatten(), charges.flatten()])
-        
+
         # For autoencoding, the output is the same as input
         features.append(input_data)
         labels.append(input_data)
 
     features = np.array(features)
     labels = np.array(labels)
-    
+
     print(f"Processed {len(features)} samples")
     return features, labels
 
@@ -65,53 +65,53 @@ validation_features, validation_labels = preprocess_data(validation_data)
 print("Preprocessing test data...")
 test_features, test_labels = preprocess_data(test_data)
 
-def build_autoencoder(input_dim):
+def build_autoencoder(input_size):
     """
     Build an autoencoder model with the specified input dimension.
-    
+
     Parameters:
-    - input_dim: The dimension of the input data.
-    
+    - input_size: The dimension of the input data.
+
     Returns:
     - autoencoder: The autoencoder model.
     - encoder: The encoder part of the autoencoder.
     """
     # Encoder network
-    input_layer = tf.keras.layers.Input(shape=(input_dim,))
+    input_layer = tf.keras.layers.Input(shape=(input_size,))
     encoded = tf.keras.layers.Dense(128, activation='relu')(input_layer)
     encoded = tf.keras.layers.Dense(64, activation='relu')(encoded)
     encoded = tf.keras.layers.Dense(32, activation='relu')(encoded)
-    
+
     # Decoder network
     decoded = tf.keras.layers.Dense(64, activation='relu')(encoded)
     decoded = tf.keras.layers.Dense(128, activation='relu')(decoded)
-    decoded = tf.keras.layers.Dense(input_dim, activation='sigmoid')(decoded)
-    
+    decoded = tf.keras.layers.Dense(input_size, activation='sigmoid')(decoded)
+
     # Autoencoder model
-    autoencoder_model = tf.keras.models.Model(input_layer, decoded)
-    
+    model = tf.keras.models.Model(input_layer, decoded)
+
     # Encoder model (to extract the encoding)
-    encoder_model = tf.keras.models.Model(input_layer, encoded)
-    
+    encoder = tf.keras.models.Model(input_layer, encoded)
+
     # Compile the autoencoder
-    autoencoder_model.compile(optimizer='adam', loss='mse')
-    
+    model.compile(optimizer='adam', loss='mse')
+
     print("Autoencoder model built successfully")
-    return autoencoder_model, encoder_model
+    return model, encoder
 
 # Build the autoencoder
-input_dim = train_features.shape[1]
-autoencoder_model, encoder_model = build_autoencoder(input_dim)
+input_size = train_features.shape[1]
+model, encoder = build_autoencoder(input_size)
 
 # Train the autoencoder model
 print("Training the autoencoder...")
 
-history = autoencoder_model.fit(
-    train_features, 
-    train_labels, 
-    epochs=50, 
-    batch_size=64, 
-    validation_data=(validation_features, validation_labels), 
+history = model.fit(
+    train_features,
+    train_labels,
+    epochs=50,
+    batch_size=64,
+    validation_data=(validation_features, validation_labels),
     verbose=1
 )
 
@@ -121,15 +121,15 @@ print(history.history)
 
 # Evaluate the model on the test set
 print("Evaluating the model on the test set...")
-test_loss = autoencoder_model.evaluate(test_features, test_labels, verbose=1)
+test_loss = model.evaluate(test_features, test_labels, verbose=1)
 print(f"Test loss: {test_loss}")
 
 # Save the trained model
 MODEL_SAVE_PATH = './autoencoder_model'
 print(f"Saving the model to {MODEL_SAVE_PATH}...")
 os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
-autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.h5'))
-encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.h5'))
+model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.h5'))
+encoder.save(os.path.join(MODEL_SAVE_PATH, 'encoder.h5'))
 
 # Generate new latent space samples and reconstruct the molecules
 print("Generating new samples from the latent space...")
@@ -142,7 +142,7 @@ latent_space_samples = np.random.normal(size=(10, 32))
 # Note: You need to use the full decoder network for this step.
 # Here we're using the second-to-last layer as a placeholder.
 # For actual decoding, you should use the full decoder.
-generated_samples = autoencoder_model.predict(latent_space_samples)
+generated_samples = model.predict(latent_space_samples)
 
 print("Generated samples from latent space:")
 print(generated_samples)
