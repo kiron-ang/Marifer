@@ -171,15 +171,7 @@ qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.h5'))
 
 # Generate new latent space samples and reconstruct the molecules
 print("Generating new samples from the latent space...")
-
-# Sample random points in the latent space
-# 10 new random samples with 32 dimensions
-latent_space_samples = np.random.normal(size=(10, 32))
-
-# Note: Since the decoder expects input from the encoded space (32 dimensions),
-# you should first encode your input data to match this dimension.
-# However, for demonstration, we'll directly use random latent space samples.
-generated_samples = qm9_autoencoder_model.predict(qm9_encoder_model.predict(train_features[:10]))
+generated_samples = qm9_autoencoder_model.predict(qm9_encoder_model.predict(train_features))
 
 print("Generated samples from latent space:")
 print(generated_samples)
