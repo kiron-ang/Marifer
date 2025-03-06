@@ -1,10 +1,10 @@
 """
 Train an autoencoder on the QM9 dataset.
 """
+import os
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
-import os
 
 # Load the QM9 dataset
 print("Loading QM9 dataset...")
@@ -120,7 +120,7 @@ def build_autoencoder(input_size):
     encoder = tf.keras.models.Model(input_layer, encoded)
 
     # Compile the autoencoder
-    autoencoder.compile(optimizer='adam', loss='mse')
+    autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
 
     print("Autoencoder model built successfully")
     return autoencoder, encoder
