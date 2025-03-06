@@ -1,7 +1,3 @@
-"""
-Module for training an autoencoder on the QM9 dataset.
-"""
-
 import os
 import sys
 import numpy as np
@@ -23,13 +19,13 @@ validation_data = dataset['validation']
 
 def preprocess_data(data):
     """
-    Preprocess the dataset by concatenating positions and charges into input features.
+    Preprocess the dataset by selecting scalar features.
 
     Parameters:
     - data: The dataset to preprocess.
 
     Returns:
-    - features: Concatenated input features.
+    - features: Selected scalar input features.
     - labels: Same as features for autoencoding.
     """
     print("Preprocessing data...")
@@ -38,12 +34,30 @@ def preprocess_data(data):
 
     # Iterate through the dataset
     for example in data:
-        # Extract the 'positions' (3D coordinates of atoms) and 'charges' (atomic charges) features
-        positions = example['positions']  # Shape: (29, 3)
-        charges = example['charges']  # Shape: (29,)
-
-        # Concatenate both 'positions' and 'charges' as input features for the autoencoder
-        input_data = np.concatenate([positions.flatten(), charges.flatten()])
+        # Extract scalar features
+        input_data = [
+            example['A'],
+            example['B'],
+            example['C'],
+            example['Cv'],
+            example['G'],
+            example['G_atomization'],
+            example['H'],
+            example['H_atomization'],
+            example['U'],
+            example['U0'],
+            example['U0_atomization'],
+            example['U_atomization'],
+            example['alpha'],
+            example['gap'],
+            example['homo'],
+            example['index'],
+            example['lumo'],
+            example['mu'],
+            example['num_atoms'],
+            example['r2'],
+            example['zpve'],
+        ]
 
         # For autoencoding, the output is the same as input
         features.append(input_data)
@@ -85,7 +99,7 @@ def build_autoencoder(input_size):
     # Decoder network
     decoded = tf.keras.layers.Dense(64, activation='relu')(encoded)
     decoded = tf.keras.layers.Dense(128, activation='relu')(decoded)
-    decoded = tf.keras.layers.Dense(input_size, activation='sigmoid')(decoded)
+    decoded = tf.keras.layers.Dense(input_size, activation='linear')(decoded)
 
     # Autoencoder model
     model = tf.keras.models.Model(input_layer, decoded)
@@ -99,9 +113,33 @@ def build_autoencoder(input_size):
     print("Autoencoder model built successfully")
     return model, encoder
 
-# Build the autoencoder
-qm9_input_size = train_features.shape[1]
-qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(qm9_input_size)
+# Determine the new input size based on the number of scalar features
+new_input_size = len([
+    'A',
+    'B',
+    'C',
+    'Cv',
+    'G',
+    'G_atomization',
+    'H',
+    'H_atomization',
+    'U',
+    'U0',
+    'U0_atomization',
+    'U_atomization',
+    'alpha',
+    'gap',
+    'homo',
+    'index',
+    'lumo',
+    'mu',
+    'num_atoms',
+    'r2',
+    'zpve',
+])
+
+# Build the autoencoder with the new input size
+qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(new_input_size)
 
 # Train the autoencoder model
 print("Training the autoencoder...")
@@ -138,7 +176,10 @@ print("Generating new samples from the latent space...")
 # 10 new random samples with 32 dimensions
 latent_space_samples = np.random.normal(size=(10, 32))
 
-generated_samples = qm9_autoencoder_model.predict(latent_space_samples)
+# Note: Since the decoder expects input from the encoded space (32 dimensions),
+# you should first encode your input data to match this dimension.
+# However, for demonstration, we'll directly use random latent space samples.
+generated_samples = qm9_autoencoder_model.predict(qm9_encoder_model.predict(train_features[:10]))
 
 print("Generated samples from latent space:")
 print(generated_samples)
