@@ -1,5 +1,5 @@
 """
-Train an autoencoder on the QM9 dataset!
+Train an autoencoder on the QM9 dataset.
 """
 import os
 import sys
@@ -105,44 +105,19 @@ def build_autoencoder(input_size):
     decoded = tf.keras.layers.Dense(input_size, activation='linear')(decoded)
 
     # Autoencoder model
-    model = tf.keras.models.Model(input_layer, decoded)
+    autoencoder = tf.keras.models.Model(input_layer, decoded)
 
     # Encoder model (to extract the encoding)
     encoder = tf.keras.models.Model(input_layer, encoded)
 
     # Compile the autoencoder
-    model.compile(optimizer='adam', loss='mse')
+    autoencoder.compile(optimizer='adam', loss='mse')
 
     print("Autoencoder model built successfully")
-    return model, encoder
-
-# Determine the new input size based on the number of scalar features
-NEW_INPUT_SIZE = len([
-    'A',
-    'B',
-    'C',
-    'Cv',
-    'G',
-    'G_atomization',
-    'H',
-    'H_atomization',
-    'U',
-    'U0',
-    'U0_atomization',
-    'U_atomization',
-    'alpha',
-    'gap',
-    'homo',
-    'index',
-    'lumo',
-    'mu',
-    'num_atoms',
-    'r2',
-    'zpve',
-])
+    return autoencoder, encoder
 
 # Build the autoencoder with the new input size
-qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(NEW_INPUT_SIZE)
+qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(21)
 
 # Train the autoencoder model
 print("Training the autoencoder...")
@@ -172,9 +147,9 @@ os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.h5'))
 qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.h5'))
 
-# Generate new latent space samples and reconstruct the molecules
-print("Generating new samples from the latent space...")
-generated_samples = qm9_autoencoder_model.predict(qm9_encoder_model.predict(train_features))
+print("Reconstructing samples from the latent space...")
+# To reconstruct, simply use the autoencoder model
+reconstructed_samples = qm9_autoencoder_model.predict(train_features)
 
-print("Generated samples from latent space:")
-print(generated_samples)
+print("Reconstructed samples from latent space:")
+print(reconstructed_samples)
