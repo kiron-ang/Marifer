@@ -5,6 +5,9 @@ import os
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
+import matplotlib.pyplot as plt
+from rdkit import Chem
+from rdkit.Chem import AllChem
 
 # Load the QM9 dataset
 print("Loading QM9 dataset...")
@@ -16,48 +19,46 @@ test_data = dataset['test']
 validation_data = dataset['validation']
 
 features_of_interest = {
-    'A': float32,
-    'B': float32,
-    'C': float32,
-    'Cv': float32,
-    'G': float32,
-    'G_atomization': float32,
-    'H': float32,
-    'H_atomization': float32,
-    # 'InChI': string,
-    # 'InChI_relaxed': string,
-    # 'Mulliken_charges': Tensor(shape=(29,), dtype=float32),
-    # 'SMILES': string,
-    # 'SMILES_relaxed': string,
-    'U': float32,
-    'U0': float32,
-    'U0_atomization': float32,
-    'U_atomization': float32,
-    'alpha': float32,
-    # 'charges': Tensor(shape=(29,), dtype=int64),
-    # 'frequencies': Tensor(shape=(None,), dtype=float32),
-    'gap': float32,
-    'homo': float32,
-    'index': int64,
-    'lumo': float32,
-    'mu': float32,
-    'num_atoms': int64,
-    # 'positions': Tensor(shape=(29, 3), dtype=float32),
-    'r2': float32,
-    # 'tag': string,
-    'zpve': float32,
+    'A': 'float32',
+    'B': 'float32',
+    'C': 'float32',
+    'Cv': 'float32',
+    'G': 'float32',
+    'G_atomization': 'float32',
+    'H': 'float32',
+    'H_atomization': 'float32',
+    'U': 'float32',
+    'U0': 'float32',
+    'U0_atomization': 'float32',
+    'U_atomization': 'float32',
+    'alpha': 'float32',
+    'gap': 'float32',
+    'homo': 'float32',
+    'index': 'int64',
+    'lumo': 'float32',
+    'mu': 'float32',
+    'num_atoms': 'int64',
+    'r2': 'float32',
+    'zpve': 'float32',
 }
 
+def smiles_to_fingerprint(smiles, n_bits=2048):
+    """Convert SMILES string to a molecular fingerprint."""
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return np.zeros(n_bits)  # return zero vector if invalid SMILES
+    fingerprint = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=n_bits)
+    return np.array(fingerprint)
 
 def preprocess_data(data):
     """
-    Preprocess the dataset by selecting scalar features.
+    Preprocess the dataset by selecting scalar features and converting SMILES to fingerprints.
 
     Parameters:
     - data: The dataset to preprocess.
 
     Returns:
-    - features: Selected scalar input features.
+    - features: Selected scalar input features plus SMILES fingerprints.
     - labels: Same as features for autoencoding.
     """
     print("Preprocessing data...")
@@ -66,11 +67,17 @@ def preprocess_data(data):
 
     # Iterate through the dataset
     for example in data:
-        # Extract scalar features
         input_data = []
-        for feature in features_of_interest.keys():
+
+        # Process numeric features
+        for feature in features_of_interest:
             input_data.append(example[feature])
 
+        # Process SMILES string (if available)
+        smiles = example['SMILES']
+        smiles_fingerprint = smiles_to_fingerprint(smiles)
+        input_data.extend(smiles_fingerprint)  # Append the fingerprint to the feature vector
+        
         # For autoencoding, the output is the same as input
         features.append(input_data)
         labels.append(input_data)
@@ -125,8 +132,12 @@ def build_autoencoder(input_size):
     print("Autoencoder model built successfully")
     return autoencoder, encoder
 
+# Calculate the new input size by adding the SMILES fingerprint length
+smiles_fingerprint_length = 2048  # Length of the fingerprint
+input_size = len(features_of_interest) + smiles_fingerprint_length
+
 # Build the autoencoder with the new input size
-qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(len(features_of_interest))
+qm9_autoencoder_model, qm9_encoder_model = build_autoencoder(input_size)
 
 # Train the autoencoder model
 print("Training the autoencoder...")
@@ -151,7 +162,7 @@ plt.title('Loss vs Epochs')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig('./figures/loss_vs_epochs.png', dpi=800)
+plt.savefig('./figures/loss-epoch.png', dpi=800)
 
 # Evaluate the model on the test set
 print("Evaluating the model on the test set...")
@@ -165,8 +176,10 @@ os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 qm9_autoencoder_model.save(os.path.join(MODEL_SAVE_PATH, 'autoencoder.keras'))
 qm9_encoder_model.save(os.path.join(MODEL_SAVE_PATH, 'encoder.keras'))
 
+# Reconstructing samples from the latent space
 print("Reconstructing samples from the latent space...")
 reconstructed_samples = qm9_autoencoder_model.predict(train_features)
 
+# Example of comparing an original sample with its reconstruction
 print(train_features[10])
 print(reconstructed_samples[10])
