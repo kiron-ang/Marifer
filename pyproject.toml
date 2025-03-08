@@ -2,7 +2,7 @@
 name = "Marifer"
 version = "0.0.1"
 description = "PLACEHOLDER"
-requires-python = ">=3.11"
+requires-python = "==3.11"
 dependencies = [
     "apache-beam>=2.63.0",
     "matplotlib>=3.10.1",
