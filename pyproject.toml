@@ -10,5 +10,5 @@ dependencies = [
     "mlcroissant>=1.0.14",
     "rdkit>=2024.9.5",
     "tensorflow>=2.18.0",
-    "tfds-nightly>=4.9.7.dev202503060044",
+    "tfds-nightly>=4.9.7",
 ]
