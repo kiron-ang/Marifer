@@ -1,6 +1,12 @@
 [project]
 name = "Marifer"
 version = "0.0.1"
-description = "PLACEHOLDER"
-requires-python = "==3.11.11"
-dependencies = []
+description = "???"
+requires-python = "==3.12.9"
+dependencies = [
+    "apache-beam",
+    "mlcroissant",
+    "rdkit",
+    "tensorflow-cpu",
+    "tensorflow-datasets",
+]
