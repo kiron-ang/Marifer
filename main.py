@@ -1,11 +1,10 @@
 """
 Main script to train two Variational Autoencoders for molecular generation.
-One model, StringVariations, works directly with SMILES strings,
-and the other, GraphVariations, works on a dummy graph representation.
-After training, each model generates 1000 molecules and the percentage
-of valid molecules is computed using RDKit. All console output is logged
-into 'output/output.txt'. The generated molecules are saved in
-'output/string-variations.txt' and 'output/graph-variations.txt'.
+One model, StringVariations, works directly with SMILES strings, and the other,
+GraphVariations, works on a dummy graph representation. After training, each model
+generates 1000 molecules and the percentage of valid molecules is computed using RDKit.
+All console output is logged into 'output/output.txt'. The generated molecules are saved
+in 'output/string-variations.txt' and 'output/graph-variations.txt'.
 """
 
 import sys
@@ -77,7 +76,11 @@ def encode_smiles(smiles, char_to_index, max_length):
         list: A list of integer indices.
     """
     seq = [char_to_index.get(char, 0) for char in smiles]
-    return seq + [0] * (max_length - len(seq)) if len(seq) < max_length else seq[:max_length]
+    if len(seq) < max_length:
+        seq += [0] * (max_length - len(seq))
+    else:
+        seq = seq[:max_length]
+    return seq
 
 
 def decode_sequence(seq, index_to_char):
@@ -96,8 +99,9 @@ def decode_sequence(seq, index_to_char):
 
 def encode_graph(smiles, fixed_dim):
     """
-    Dummy function to encode a SMILES string into a fixed-dimension vector representing a graph.
-    In a real application, this should convert the molecule into an actual graph representation.
+    Dummy function to encode a SMILES string into a fixed-dimension vector representing
+    a graph. In a real application, this should convert the molecule into an actual graph
+    representation.
 
     Args:
         smiles (str): The SMILES string.
@@ -170,9 +174,15 @@ def preprocess_data(input_path):
         sys.exit(1)
     char_to_index, index_to_char = create_smiles_tokenizer(smiles_list)
     max_length = max(len(smi) for smi in smiles_list)
-    encoded_smiles = np.array([encode_smiles(smi, char_to_index, max_length) for smi in smiles_list], dtype=np.int32)
+    encoded_smiles = np.array(
+        [encode_smiles(smi, char_to_index, max_length) for smi in smiles_list],
+        dtype=np.int32
+    )
     graph_dim = 100
-    graph_data = np.array([encode_graph(smi, graph_dim) for smi in smiles_list], dtype=np.float32)
+    graph_data = np.array(
+        [encode_graph(smi, graph_dim) for smi in smiles_list],
+        dtype=np.float32
+    )
     logging.info("Data preprocessing complete.")
     return encoded_smiles, char_to_index, index_to_char, max_length, graph_data
 
@@ -199,12 +209,6 @@ class Sampling(keras.layers.Layer):
         epsilon = tf.random.normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-    def get_config(self):
-        """
-        Returns the config of the layer.
-        """
-        return super().get_config()
-
 
 class StringVariations(keras.Model):
     """
@@ -226,27 +230,34 @@ class StringVariations(keras.Model):
         self.vocab_size = vocab_size
 
         # Build encoder model.
-        encoder_inputs = keras.Input(shape=(max_length,), name="string_encoder_input")
+        encoder_inputs = keras.Input(shape=(max_length,),
+                                     name="string_encoder_input")
         x = keras.layers.Embedding(input_dim=vocab_size + 1, output_dim=64,
                                    mask_zero=True, name="string_embedding")(encoder_inputs)
         x = keras.layers.LSTM(64, name="string_encoder_lstm")(x)
         z_mean = keras.layers.Dense(latent_dim, name="string_z_mean")(x)
         z_log_var = keras.layers.Dense(latent_dim, name="string_z_log_var")(x)
         z = Sampling(name="string_sampling")([z_mean, z_log_var])
-        self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
-                                   name="string_variations_encoder")
+        self.encoder = keras.Model(
+            encoder_inputs, [z_mean, z_log_var, z],
+            name="string_variations_encoder"
+        )
 
         # Build decoder model.
-        latent_inputs = keras.Input(shape=(latent_dim,), name="string_z_sampling")
-        x = keras.layers.RepeatVector(max_length, name="string_repeat_vector")(latent_inputs)
-        x = keras.layers.LSTM(64, return_sequences=True, name="string_decoder_lstm")(x)
+        latent_inputs = keras.Input(shape=(latent_dim,),
+                                     name="string_z_sampling")
+        x = keras.layers.RepeatVector(max_length,
+                                      name="string_repeat_vector")(latent_inputs)
+        x = keras.layers.LSTM(64, return_sequences=True,
+                              name="string_decoder_lstm")(x)
         decoder_outputs = keras.layers.TimeDistributed(
             keras.layers.Dense(vocab_size + 1, activation="softmax"),
             name="string_decoder_output"
         )(x)
-        self.decoder = keras.Model(latent_inputs, decoder_outputs,
-                                   name="string_variations_decoder")
-
+        self.decoder = keras.Model(
+            latent_inputs, decoder_outputs,
+            name="string_variations_decoder"
+        )
         self.total_loss_tracker = keras.metrics.Mean(name="loss")
 
     def encode(self, x):
@@ -304,7 +315,9 @@ class StringVariations(keras.Model):
             reconstruction_loss = tf.reduce_mean(
                 keras.losses.sparse_categorical_crossentropy(data, reconstruction)
             ) * self.max_length
-            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
+            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var -
+                                              tf.square(z_mean) -
+                                              tf.exp(z_log_var))
             loss = reconstruction_loss + kl_loss
         grads = tape.gradient(loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -350,22 +363,29 @@ class GraphVariations(keras.Model):
         self.latent_dim = latent_dim
 
         # Build encoder model.
-        encoder_inputs = keras.Input(shape=(input_dim,), name="graph_encoder_input")
-        x = keras.layers.Dense(128, activation="relu", name="graph_dense1")(encoder_inputs)
+        encoder_inputs = keras.Input(shape=(input_dim,),
+                                     name="graph_encoder_input")
+        x = keras.layers.Dense(128, activation="relu",
+                               name="graph_dense1")(encoder_inputs)
         z_mean = keras.layers.Dense(latent_dim, name="graph_z_mean")(x)
         z_log_var = keras.layers.Dense(latent_dim, name="graph_z_log_var")(x)
         z = Sampling(name="graph_sampling")([z_mean, z_log_var])
-        self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
-                                   name="graph_variations_encoder")
+        self.encoder = keras.Model(
+            encoder_inputs, [z_mean, z_log_var, z],
+            name="graph_variations_encoder"
+        )
 
         # Build decoder model.
-        latent_inputs = keras.Input(shape=(latent_dim,), name="graph_z_sampling")
-        x = keras.layers.Dense(128, activation="relu", name="graph_dense2")(latent_inputs)
+        latent_inputs = keras.Input(shape=(latent_dim,),
+                                     name="graph_z_sampling")
+        x = keras.layers.Dense(128, activation="relu",
+                               name="graph_dense2")(latent_inputs)
         decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid",
                                              name="graph_decoder_output")(x)
-        self.decoder = keras.Model(latent_inputs, decoder_outputs,
-                                   name="graph_variations_decoder")
-
+        self.decoder = keras.Model(
+            latent_inputs, decoder_outputs,
+            name="graph_variations_decoder"
+        )
         self.total_loss_tracker = keras.metrics.Mean(name="loss")
 
     def encode(self, x):
@@ -421,7 +441,9 @@ class GraphVariations(keras.Model):
             z_mean, z_log_var, z = self.encode(data)
             reconstruction = self.decode(z)
             reconstruction_loss = tf.reduce_mean(tf.square(data - reconstruction))
-            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
+            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var -
+                                              tf.square(z_mean) -
+                                              tf.exp(z_log_var))
             loss = reconstruction_loss + kl_loss
         grads = tape.gradient(loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -440,9 +462,9 @@ class GraphVariations(keras.Model):
             list: Generated SMILES strings.
         """
         latent_samples = np.random.normal(size=(num_samples, self.latent_dim))
-        preds = self.decode(latent_samples)
-        # Use a dummy conversion: always return "C" (methane) for each sample.
-        return ["C" for _ in preds]
+        _ = self.decode(latent_samples)
+        # Dummy conversion: always return "C" (methane) for each sample.
+        return ["C" for _ in range(num_samples)]
 
 
 def train_models(args):
@@ -513,7 +535,7 @@ def main():
         description="Train two VAEs for molecular generation and evaluate validity."
     )
     parser.add_argument(
-        "--input", type=str, default="test-smiles.txt",
+        "--input", type=str, default="data/test-smiles.txt",
         help="Path to the input SMILES text file."
     )
     parser.add_argument(
@@ -527,7 +549,8 @@ def main():
 
     string_file = os.path.join(OUTPUT_DIR, "string-variations.txt")
     graph_file = os.path.join(OUTPUT_DIR, "graph-variations.txt")
-    logging.info("Saving generated molecules to '%s' and '%s'.", string_file, graph_file)
+    logging.info("Saving generated molecules to '%s' and '%s'.",
+                 string_file, graph_file)
     with open(string_file, "w", encoding="utf-8") as f:
         for smi in gen_strings:
             f.write(smi + "\n")
