@@ -4,11 +4,12 @@ One model, StringVariations, works directly with SMILES strings,
 and the other, GraphVariations, works on a dummy graph representation.
 After training, each model generates 1000 molecules and the percentage
 of valid molecules is computed using RDKit. All console output is logged
-into 'output.log'. The generated molecules are saved in
-'StringVariations.txt' and 'GraphVariations.txt'.
+into 'output/output.txt'. The generated molecules are saved in
+'output/string-variations.txt' and 'output/graph-variations.txt'.
 """
 
 import sys
+import os
 import argparse
 import logging
 import hashlib
@@ -17,11 +18,18 @@ import tensorflow as tf
 from tensorflow import keras
 from rdkit import Chem
 
-# Set up logging to output both to console and to a file.
+# Create output directory and set up logging.
+OUTPUT_DIR = "output"
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("output.log"), logging.StreamHandler()]
+    handlers=[
+        logging.FileHandler(os.path.join(OUTPUT_DIR, "output.txt")),
+        logging.StreamHandler()
+    ]
 )
 
 
@@ -37,8 +45,7 @@ def read_smiles(file_path):
         list: A list of SMILES strings.
     """
     with open(file_path, "r", encoding="utf-8") as file_in:
-        smiles_list = [line.strip() for line in file_in if line.strip()]
-    return smiles_list
+        return [line.strip() for line in file_in if line.strip()]
 
 
 def create_smiles_tokenizer(smiles_list):
@@ -70,11 +77,7 @@ def encode_smiles(smiles, char_to_index, max_length):
         list: A list of integer indices.
     """
     seq = [char_to_index.get(char, 0) for char in smiles]
-    if len(seq) < max_length:
-        seq += [0] * (max_length - len(seq))
-    else:
-        seq = seq[:max_length]
-    return seq
+    return seq + [0] * (max_length - len(seq)) if len(seq) < max_length else seq[:max_length]
 
 
 def decode_sequence(seq, index_to_char):
@@ -133,8 +136,7 @@ def is_valid_smiles(smiles):
     Returns:
         bool: True if the molecule is valid, False otherwise.
     """
-    mol = Chem.MolFromSmiles(smiles)
-    return mol is not None
+    return Chem.MolFromSmiles(smiles) is not None
 
 
 def evaluate_generation(generated_smiles):
@@ -168,15 +170,9 @@ def preprocess_data(input_path):
         sys.exit(1)
     char_to_index, index_to_char = create_smiles_tokenizer(smiles_list)
     max_length = max(len(smi) for smi in smiles_list)
-    encoded_smiles = np.array(
-        [encode_smiles(smi, char_to_index, max_length) for smi in smiles_list],
-        dtype=np.int32
-    )
+    encoded_smiles = np.array([encode_smiles(smi, char_to_index, max_length) for smi in smiles_list], dtype=np.int32)
     graph_dim = 100
-    graph_data = np.array(
-        [encode_graph(smi, graph_dim) for smi in smiles_list],
-        dtype=np.float32
-    )
+    graph_data = np.array([encode_graph(smi, graph_dim) for smi in smiles_list], dtype=np.float32)
     logging.info("Data preprocessing complete.")
     return encoded_smiles, char_to_index, index_to_char, max_length, graph_data
 
@@ -207,8 +203,7 @@ class Sampling(keras.layers.Layer):
         """
         Returns the config of the layer.
         """
-        config = super().get_config()
-        return config
+        return super().get_config()
 
 
 class StringVariations(keras.Model):
@@ -230,7 +225,7 @@ class StringVariations(keras.Model):
         self.latent_dim = latent_dim
         self.vocab_size = vocab_size
 
-        # Build encoder model
+        # Build encoder model.
         encoder_inputs = keras.Input(shape=(max_length,), name="string_encoder_input")
         x = keras.layers.Embedding(input_dim=vocab_size + 1, output_dim=64,
                                    mask_zero=True, name="string_embedding")(encoder_inputs)
@@ -241,7 +236,7 @@ class StringVariations(keras.Model):
         self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
                                    name="string_variations_encoder")
 
-        # Build decoder model
+        # Build decoder model.
         latent_inputs = keras.Input(shape=(latent_dim,), name="string_z_sampling")
         x = keras.layers.RepeatVector(max_length, name="string_repeat_vector")(latent_inputs)
         x = keras.layers.LSTM(64, return_sequences=True, name="string_decoder_lstm")(x)
@@ -309,9 +304,7 @@ class StringVariations(keras.Model):
             reconstruction_loss = tf.reduce_mean(
                 keras.losses.sparse_categorical_crossentropy(data, reconstruction)
             ) * self.max_length
-            kl_loss = -0.5 * tf.reduce_mean(
-                1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)
-            )
+            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             loss = reconstruction_loss + kl_loss
         grads = tape.gradient(loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -334,8 +327,7 @@ class StringVariations(keras.Model):
         generated = []
         for pred in preds:
             token_indices = np.argmax(pred, axis=-1)
-            smiles = decode_sequence(token_indices, index_to_char)
-            generated.append(smiles)
+            generated.append(decode_sequence(token_indices, index_to_char))
         return generated
 
 
@@ -357,7 +349,7 @@ class GraphVariations(keras.Model):
         self.input_dim = input_dim
         self.latent_dim = latent_dim
 
-        # Build encoder model
+        # Build encoder model.
         encoder_inputs = keras.Input(shape=(input_dim,), name="graph_encoder_input")
         x = keras.layers.Dense(128, activation="relu", name="graph_dense1")(encoder_inputs)
         z_mean = keras.layers.Dense(latent_dim, name="graph_z_mean")(x)
@@ -366,7 +358,7 @@ class GraphVariations(keras.Model):
         self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
                                    name="graph_variations_encoder")
 
-        # Build decoder model
+        # Build decoder model.
         latent_inputs = keras.Input(shape=(latent_dim,), name="graph_z_sampling")
         x = keras.layers.Dense(128, activation="relu", name="graph_dense2")(latent_inputs)
         decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid",
@@ -429,9 +421,7 @@ class GraphVariations(keras.Model):
             z_mean, z_log_var, z = self.encode(data)
             reconstruction = self.decode(z)
             reconstruction_loss = tf.reduce_mean(tf.square(data - reconstruction))
-            kl_loss = -0.5 * tf.reduce_mean(
-                1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)
-            )
+            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             loss = reconstruction_loss + kl_loss
         grads = tape.gradient(loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -451,51 +441,47 @@ class GraphVariations(keras.Model):
         """
         latent_samples = np.random.normal(size=(num_samples, self.latent_dim))
         preds = self.decode(latent_samples)
-        generated = []
-        for _ in preds:
-            smiles = decode_graph(None)
-            generated.append(smiles)
-        return generated
+        # Use a dummy conversion: always return "C" (methane) for each sample.
+        return ["C" for _ in preds]
 
 
-# -------------------- Main Function -------------------- #
-def main():
+def train_models(args):
     """
-    Main function that reads data, trains both models, generates molecules,
-    and evaluates the validity of the generated molecules. Also stores the
-    generated molecules into files.
+    Preprocesses the data and trains both models.
+
+    Args:
+        args (Namespace): Command line arguments.
+
+    Returns:
+        tuple: (string_variations, graph_variations, index_to_char)
     """
-    parser = argparse.ArgumentParser(
-        description="Train two VAEs for molecular generation and evaluate validity."
-    )
-    parser.add_argument(
-        "--input", type=str, default="test-smiles.txt",
-        help="Path to the input SMILES text file."
-    )
-    parser.add_argument(
-        "--epochs", type=int, default=50,
-        help="Number of training epochs for both models."
-    )
-    args = parser.parse_args()
-
-    logging.info("Starting preprocessing of SMILES data.")
-    (encoded_smiles, char_to_index, index_to_char,
-     max_length, graph_data) = preprocess_data(args.input)
-
-    # Initialize and train StringVariations model
+    encoded_smiles, char_to_index, index_to_char, max_length, graph_data = preprocess_data(args.input)
     logging.info("Initializing StringVariations model.")
     string_variations = StringVariations(vocab_size=len(char_to_index), max_length=max_length)
     string_variations.compile(optimizer="adam")
     logging.info("Training StringVariations for %d epochs...", args.epochs)
     string_variations.fit(encoded_smiles, epochs=args.epochs, batch_size=32, verbose=2)
 
-    # Initialize and train GraphVariations model
     logging.info("Initializing GraphVariations model.")
     graph_variations = GraphVariations(input_dim=graph_data.shape[1])
     graph_variations.compile(optimizer="adam")
     logging.info("Training GraphVariations for %d epochs...", args.epochs)
     graph_variations.fit(graph_data, epochs=args.epochs, batch_size=32, verbose=2)
+    return string_variations, graph_variations, index_to_char
 
+
+def generate_and_evaluate(string_variations, graph_variations, index_to_char):
+    """
+    Generates molecules with both models and evaluates their validity.
+
+    Args:
+        string_variations (StringVariations): Trained model for SMILES strings.
+        graph_variations (GraphVariations): Trained model for graph data.
+        index_to_char (dict): Mapping from token indices to characters.
+
+    Returns:
+        tuple: (generated_strings, generated_graphs)
+    """
     num_generate = 1000
     logging.info("Generating %d molecules with StringVariations...", num_generate)
     generated_strings = string_variations.generate(num_generate, index_to_char)
@@ -515,15 +501,40 @@ def main():
     logging.info("Evaluation Metrics:")
     logging.info("StringVariations valid percentage: %.2f%%", valid_pct_string)
     logging.info("GraphVariations valid percentage: %.2f%%", valid_pct_graph)
+    return generated_strings, generated_graphs
 
-    # Save generated molecules to files.
-    with open("StringVariations.txt", "w", encoding="utf-8") as f:
-        for smi in generated_strings:
+
+def main():
+    """
+    Main function that parses arguments, trains models, generates molecules,
+    evaluates them, and saves all output files in the output directory.
+    """
+    parser = argparse.ArgumentParser(
+        description="Train two VAEs for molecular generation and evaluate validity."
+    )
+    parser.add_argument(
+        "--input", type=str, default="test-smiles.txt",
+        help="Path to the input SMILES text file."
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=50,
+        help="Number of training epochs for both models."
+    )
+    args = parser.parse_args()
+
+    string_var, graph_var, index_to_char = train_models(args)
+    gen_strings, gen_graphs = generate_and_evaluate(string_var, graph_var, index_to_char)
+
+    string_file = os.path.join(OUTPUT_DIR, "string-variations.txt")
+    graph_file = os.path.join(OUTPUT_DIR, "graph-variations.txt")
+    logging.info("Saving generated molecules to '%s' and '%s'.", string_file, graph_file)
+    with open(string_file, "w", encoding="utf-8") as f:
+        for smi in gen_strings:
             f.write(smi + "\n")
-    with open("GraphVariations.txt", "w", encoding="utf-8") as f:
-        for smi in generated_graphs:
+    with open(graph_file, "w", encoding="utf-8") as f:
+        for smi in gen_graphs:
             f.write(smi + "\n")
-    logging.info("Generated molecules saved to 'StringVariations.txt' and 'GraphVariations.txt'.")
+    logging.info("All outputs saved in the '%s' directory.", OUTPUT_DIR)
 
 
 if __name__ == "__main__":
