@@ -157,7 +157,7 @@ def evaluate_generation(generated_smiles):
     return 100.0 * valid_count / len(generated_smiles) if generated_smiles else 0.0
 
 
-def preprocess_data(input_path):
+def process_data(input_path):
     """
     Reads and preprocesses SMILES data.
 
@@ -188,6 +188,7 @@ def preprocess_data(input_path):
 
 
 # -------------------- Custom Layers and Models -------------------- #
+# pylint: disable=too-few-public-methods
 class Sampling(keras.layers.Layer):
     """
     Uses (z_mean, z_log_var) to sample z, the latent vector.
@@ -477,7 +478,7 @@ def train_models(args):
     Returns:
         tuple: (string_variations, graph_variations, index_to_char)
     """
-    encoded_smiles, char_to_index, index_to_char, max_length, graph_data = preprocess_data(args.input)
+    encoded_smiles, char_to_index, index_to_char, max_length, graph_data = process_data(args.input)
     logging.info("Initializing StringVariations model.")
     string_variations = StringVariations(vocab_size=len(char_to_index), max_length=max_length)
     string_variations.compile(optimizer="adam")
