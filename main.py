@@ -1,7 +1,7 @@
 """
 Main script to train two Variational Autoencoders (VAEs) for molecular generation.
 One VAE uses SMILES strings directly and the other uses a dummy graph representation.
-After training, each VAE generates 100 molecules and the percentage of valid molecules
+After training, each VAE generates 1000 molecules and the percentage of valid molecules
 is computed using RDKit.
 """
 
@@ -9,9 +9,10 @@ import argparse
 import hashlib
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras as keras
-import tensorflow.keras.backend as K
+from tensorflow import keras  # pylint: disable=import-error
+import tensorflow_datasets as tfds
 from rdkit import Chem
+
 
 # -------------------- Utility Functions -------------------- #
 def read_smiles(file_path):
@@ -40,7 +41,6 @@ def create_smiles_tokenizer(smiles_list):
         tuple: (char_to_index, index_to_char) dictionaries.
     """
     chars = sorted(set("".join(smiles_list)))
-    # Reserve 0 for padding.
     char_to_index = {char: idx + 1 for idx, char in enumerate(chars)}
     index_to_char = {idx + 1: char for idx, char in enumerate(chars)}
     return char_to_index, index_to_char
@@ -93,24 +93,22 @@ def encode_graph(smiles, fixed_dim):
         np.ndarray: A one-hot-like vector of length fixed_dim.
     """
     vec = np.zeros(fixed_dim, dtype=np.float32)
-    # Use a hash of the SMILES to pick an index (for demonstration purposes).
     idx = int(hashlib.sha256(smiles.encode("utf-8")).hexdigest(), 16) % fixed_dim
     vec[idx] = 1.0
     return vec
 
 
-def decode_graph(vector):
+def decode_graph(_vector):
     """
     Dummy function to decode a graph representation vector back into a SMILES string.
     Here, we return a placeholder molecule (methane).
 
     Args:
-        vector (np.ndarray): Graph representation vector.
+        _vector (np.ndarray): Graph representation vector.
 
     Returns:
-        str: A SMILES string.
+        str: The decoded SMILES string.
     """
-    # Placeholder: always return methane
     return "C"
 
 
@@ -142,7 +140,37 @@ def evaluate_generation(generated_smiles):
     return 100.0 * valid_count / len(generated_smiles) if generated_smiles else 0.0
 
 
-# -------------------- Sampling Layer -------------------- #
+def preprocess_data(input_path):
+    """
+    Reads and preprocesses SMILES data.
+
+    Args:
+        input_path (str): Path to the SMILES text file.
+
+    Returns:
+        tuple: (encoded_smiles, char_to_index, index_to_char, max_length, graph_data)
+    """
+    print(f"Reading SMILES data from: {input_path}")
+    smiles_list = read_smiles(input_path)
+    if not smiles_list:
+        print("No SMILES strings found in the input file.")
+        exit(1)
+    char_to_index, index_to_char = create_smiles_tokenizer(smiles_list)
+    max_length = max(len(smi) for smi in smiles_list)
+    encoded_smiles = np.array(
+        [encode_smiles(smi, char_to_index, max_length) for smi in smiles_list],
+        dtype=np.int32
+    )
+    graph_dim = 100
+    graph_data = np.array(
+        [encode_graph(smi, graph_dim) for smi in smiles_list],
+        dtype=np.float32
+    )
+    print("Data preprocessing complete.")
+    return encoded_smiles, char_to_index, index_to_char, max_length, graph_data
+
+
+# -------------------- Custom Layers and Models -------------------- #
 class Sampling(keras.layers.Layer):
     """
     Uses (z_mean, z_log_var) to sample z, the latent vector.
@@ -164,9 +192,12 @@ class Sampling(keras.layers.Layer):
         epsilon = tf.random.normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
+    def get_config(self):
+        config = super().get_config()
+        return config
 
-# -------------------- SMILES VAE -------------------- #
-class SmilesVAE:
+
+class SmilesVAE(keras.Model):
     """
     Variational Autoencoder that works directly with SMILES strings.
     """
@@ -180,74 +211,62 @@ class SmilesVAE:
             max_length (int): Maximum length of SMILES sequences.
             latent_dim (int): Dimensionality of the latent space.
         """
-        self.vocab_size = vocab_size
+        super(SmilesVAE, self).__init__()
         self.max_length = max_length
         self.latent_dim = latent_dim
-        self._build_model()
+        self.vocab_size = vocab_size
+        self.embedding = keras.layers.Embedding(
+            input_dim=vocab_size + 1, output_dim=64, mask_zero=True, name="embedding"
+        )
+        self.encoder_lstm = keras.layers.LSTM(64, name="encoder_lstm")
+        self.z_mean_dense = keras.layers.Dense(latent_dim, name="z_mean")
+        self.z_log_var_dense = keras.layers.Dense(latent_dim, name="z_log_var")
+        self.sampling = Sampling(name="sampling")
+        self.repeat_vector = keras.layers.RepeatVector(max_length, name="repeat_vector")
+        self.decoder_lstm = keras.layers.LSTM(64, return_sequences=True, name="decoder_lstm")
+        self.decoder_dense = keras.layers.TimeDistributed(
+            keras.layers.Dense(vocab_size + 1, activation="softmax"), name="decoder_output"
+        )
+        self.total_loss_tracker = keras.metrics.Mean(name="loss")
 
-    def _build_model(self):
-        """
-        Builds the encoder, decoder, and VAE models.
-        """
-        # Encoder
-        encoder_inputs = keras.Input(shape=(self.max_length,), name="encoder_input")
-        x = keras.layers.Embedding(
-            input_dim=self.vocab_size + 1, output_dim=64, mask_zero=True,
-            name="embedding")(encoder_inputs)
-        x = keras.layers.LSTM(64, name="encoder_lstm")(x)
-        z_mean = keras.layers.Dense(self.latent_dim, name="z_mean")(x)
-        z_log_var = keras.layers.Dense(self.latent_dim, name="z_log_var")(x)
-        z = Sampling(name="sampling")([z_mean, z_log_var])
-        self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
-                                    name="smiles_encoder")
+    def encode(self, x):
+        x = self.embedding(x)
+        x = self.encoder_lstm(x)
+        z_mean = self.z_mean_dense(x)
+        z_log_var = self.z_log_var_dense(x)
+        z = self.sampling([z_mean, z_log_var])
+        return z_mean, z_log_var, z
 
-        # Decoder
-        latent_inputs = keras.Input(shape=(self.latent_dim,), name="z_sampling")
-        x = keras.layers.RepeatVector(self.max_length, name="repeat_vector")(latent_inputs)
-        x = keras.layers.LSTM(64, return_sequences=True, name="decoder_lstm")(x)
-        decoder_outputs = keras.layers.TimeDistributed(
-            keras.layers.Dense(self.vocab_size + 1, activation="softmax"),
-            name="decoder_output")(x)
-        self.decoder = keras.Model(latent_inputs, decoder_outputs,
-                                   name="smiles_decoder")
+    def decode(self, z):
+        x = self.repeat_vector(z)
+        x = self.decoder_lstm(x)
+        return self.decoder_dense(x)
 
-        # VAE Model
-        outputs = self.decoder(z)
-        self.vae = keras.Model(encoder_inputs, outputs, name="smiles_vae")
+    def call(self, x):
+        z_mean, z_log_var, z = self.encode(x)
+        return self.decode(z)
 
-        # Loss calculation
-        reconstruction_loss = keras.losses.sparse_categorical_crossentropy(
-            encoder_inputs, outputs)
-        reconstruction_loss = tf.reduce_mean(reconstruction_loss) * self.max_length
-        kl_loss = -0.5 * tf.reduce_mean(
-            1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
-        self.vae.add_loss(reconstruction_loss + kl_loss)
-        self.vae.compile(optimizer="adam")
-
-    def train(self, x_train, epochs=1, batch_size=32):
-        """
-        Trains the SMILES VAE.
-
-        Args:
-            x_train (np.ndarray): Training data.
-            epochs (int): Number of epochs.
-            batch_size (int): Batch size.
-        """
-        self.vae.fit(x_train, x_train, epochs=epochs, batch_size=batch_size)
+    def train_step(self, data):
+        if isinstance(data, tuple):
+            data = data[0]
+        with tf.GradientTape() as tape:
+            z_mean, z_log_var, z = self.encode(data)
+            reconstruction = self.decode(z)
+            reconstruction_loss = tf.reduce_mean(
+                keras.losses.sparse_categorical_crossentropy(data, reconstruction)
+            ) * self.max_length
+            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var -
+                                            tf.square(z_mean) -
+                                            tf.exp(z_log_var))
+            loss = reconstruction_loss + kl_loss
+        grads = tape.gradient(loss, self.trainable_weights)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+        self.total_loss_tracker.update_state(loss)
+        return {"loss": self.total_loss_tracker.result()}
 
     def generate(self, num_samples, index_to_char):
-        """
-        Generates SMILES strings by sampling from the latent space.
-
-        Args:
-            num_samples (int): Number of molecules to generate.
-            index_to_char (dict): Mapping from token indices to characters.
-
-        Returns:
-            list: Generated SMILES strings.
-        """
         latent_samples = np.random.normal(size=(num_samples, self.latent_dim))
-        preds = self.decoder.predict(latent_samples)
+        preds = self.decode(latent_samples)
         generated = []
         for pred in preds:
             token_indices = np.argmax(pred, axis=-1)
@@ -256,8 +275,7 @@ class SmilesVAE:
         return generated
 
 
-# -------------------- Graph VAE -------------------- #
-class GraphVAE:
+class GraphVAE(keras.Model):
     """
     Variational Autoencoder that works on a dummy graph representation.
     In a full implementation, the encoder/decoder would operate on actual graph data.
@@ -271,65 +289,52 @@ class GraphVAE:
             input_dim (int): Dimensionality of the graph representation.
             latent_dim (int): Dimensionality of the latent space.
         """
+        super(GraphVAE, self).__init__()
         self.input_dim = input_dim
         self.latent_dim = latent_dim
-        self._build_model()
+        self.dense1 = keras.layers.Dense(128, activation="relu", name="graph_dense1")
+        self.z_mean_dense = keras.layers.Dense(latent_dim, name="graph_z_mean")
+        self.z_log_var_dense = keras.layers.Dense(latent_dim, name="graph_z_log_var")
+        self.sampling = Sampling(name="graph_sampling")
+        self.dense2 = keras.layers.Dense(128, activation="relu", name="graph_dense2")
+        self.decoder_output = keras.layers.Dense(input_dim, activation="sigmoid",
+                                                   name="graph_decoder_output")
+        self.total_loss_tracker = keras.metrics.Mean(name="loss")
 
-    def _build_model(self):
-        """
-        Builds the encoder, decoder, and VAE models.
-        """
-        # Encoder
-        encoder_inputs = keras.Input(shape=(self.input_dim,), name="graph_encoder_input")
-        x = keras.layers.Dense(128, activation="relu", name="graph_dense1")(encoder_inputs)
-        z_mean = keras.layers.Dense(self.latent_dim, name="graph_z_mean")(x)
-        z_log_var = keras.layers.Dense(self.latent_dim, name="graph_z_log_var")(x)
-        z = Sampling(name="graph_sampling")([z_mean, z_log_var])
-        self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
-                                    name="graph_encoder")
+    def encode(self, x):
+        x = self.dense1(x)
+        z_mean = self.z_mean_dense(x)
+        z_log_var = self.z_log_var_dense(x)
+        z = self.sampling([z_mean, z_log_var])
+        return z_mean, z_log_var, z
 
-        # Decoder
-        latent_inputs = keras.Input(shape=(self.latent_dim,), name="graph_z_sampling")
-        x = keras.layers.Dense(128, activation="relu", name="graph_dense2")(latent_inputs)
-        decoder_outputs = keras.layers.Dense(self.input_dim, activation="sigmoid",
-                                             name="graph_decoder_output")(x)
-        self.decoder = keras.Model(latent_inputs, decoder_outputs, name="graph_decoder")
+    def decode(self, z):
+        x = self.dense2(z)
+        return self.decoder_output(x)
 
-        # VAE Model
-        outputs = self.decoder(z)
-        self.vae = keras.Model(encoder_inputs, outputs, name="graph_vae")
+    def call(self, x):
+        z_mean, z_log_var, z = self.encode(x)
+        return self.decode(z)
 
-        reconstruction_loss = tf.reduce_mean(
-            tf.square(encoder_inputs - outputs))
-        kl_loss = -0.5 * tf.reduce_mean(
-            1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
-        self.vae.add_loss(reconstruction_loss + kl_loss)
-        self.vae.compile(optimizer="adam")
-
-    def train(self, x_train, epochs=1, batch_size=32):
-        """
-        Trains the Graph VAE.
-
-        Args:
-            x_train (np.ndarray): Training data.
-            epochs (int): Number of epochs.
-            batch_size (int): Batch size.
-        """
-        self.vae.fit(x_train, x_train, epochs=epochs, batch_size=batch_size)
+    def train_step(self, data):
+        if isinstance(data, tuple):
+            data = data[0]
+        with tf.GradientTape() as tape:
+            z_mean, z_log_var, z = self.encode(data)
+            reconstruction = self.decode(z)
+            reconstruction_loss = tf.reduce_mean(tf.square(data - reconstruction))
+            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var -
+                                            tf.square(z_mean) -
+                                            tf.exp(z_log_var))
+            loss = reconstruction_loss + kl_loss
+        grads = tape.gradient(loss, self.trainable_weights)
+        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+        self.total_loss_tracker.update_state(loss)
+        return {"loss": self.total_loss_tracker.result()}
 
     def generate(self, num_samples):
-        """
-        Generates graph representations by sampling from the latent space,
-        then decodes them into SMILES strings using a dummy conversion.
-
-        Args:
-            num_samples (int): Number of molecules to generate.
-
-        Returns:
-            list: Generated SMILES strings.
-        """
         latent_samples = np.random.normal(size=(num_samples, self.latent_dim))
-        preds = self.decoder.predict(latent_samples)
+        preds = self.decode(latent_samples)
         generated = []
         for pred in preds:
             smiles = decode_graph(pred)
@@ -344,61 +349,55 @@ def main():
     and evaluates the validity of the generated molecules.
     """
     parser = argparse.ArgumentParser(
-        description="Train two VAEs for molecular generation and evaluate validity.")
+        description="Train two VAEs for molecular generation and evaluate validity."
+    )
     parser.add_argument(
         "--input", type=str, default="test-smiles.txt",
-        help="Path to the input SMILES text file.")
+        help="Path to the input SMILES text file."
+    )
     parser.add_argument(
-        "--epochs", type=int, default=1,
-        help="Number of training epochs for both models.")
+        "--epochs", type=int, default=50,
+        help="Number of training epochs for both models."
+    )
     args = parser.parse_args()
 
-    # Read and preprocess SMILES data
-    smiles_list = read_smiles(args.input)
-    if not smiles_list:
-        print("No SMILES strings found in the input file.")
-        return
-
-    char_to_index, index_to_char = create_smiles_tokenizer(smiles_list)
-    max_length = max(len(smi) for smi in smiles_list)
-    encoded_smiles = np.array(
-        [encode_smiles(smi, char_to_index, max_length) for smi in smiles_list],
-        dtype=np.int32
-    )
-
-    # For the graph VAE, we use a dummy fixed dimension
-    graph_dim = 100
-    graph_data = np.array(
-        [encode_graph(smi, graph_dim) for smi in smiles_list],
-        dtype=np.float32
-    )
+    print("Starting preprocessing of SMILES data.")
+    (encoded_smiles, char_to_index, index_to_char,
+     max_length, graph_data) = preprocess_data(args.input)
 
     # Initialize and train SMILES VAE
+    print("Initializing SMILES VAE.")
     smiles_vae = SmilesVAE(vocab_size=len(char_to_index), max_length=max_length)
-    smiles_vae.train(encoded_smiles, epochs=args.epochs)
+    smiles_vae.compile(optimizer="adam")
+    print("Training SMILES VAE...")
+    smiles_vae.fit(encoded_smiles, epochs=args.epochs, batch_size=32, verbose=2)
 
     # Initialize and train Graph VAE
-    graph_vae = GraphVAE(input_dim=graph_dim)
-    graph_vae.train(graph_data, epochs=args.epochs)
+    print("Initializing Graph VAE.")
+    graph_vae = GraphVAE(input_dim=graph_data.shape[1])
+    graph_vae.compile(optimizer="adam")
+    print("Training Graph VAE...")
+    graph_vae.fit(graph_data, epochs=args.epochs, batch_size=32, verbose=2)
 
-    # Generate molecules and evaluate
-    num_generate = 100
+    num_generate = 1000
+    print(f"Generating {num_generate} molecules with SMILES VAE...")
     generated_smiles_direct = smiles_vae.generate(num_generate, index_to_char)
+    print(f"Generating {num_generate} molecules with Graph VAE...")
     generated_smiles_graph = graph_vae.generate(num_generate)
 
     valid_pct_direct = evaluate_generation(generated_smiles_direct)
     valid_pct_graph = evaluate_generation(generated_smiles_graph)
 
-    print("SMILES VAE generated molecules:")
-    for smi in generated_smiles_direct:
+    print("\nSMILES VAE generated molecules (first 20 shown):")
+    for smi in generated_smiles_direct[:20]:
         print(smi)
-    print("\nGraph VAE generated molecules:")
-    for smi in generated_smiles_graph:
+    print("\nGraph VAE generated molecules (first 20 shown):")
+    for smi in generated_smiles_graph[:20]:
         print(smi)
 
     print("\nEvaluation Metrics:")
-    print("SMILES VAE valid percentage: {:.2f}%".format(valid_pct_direct))
-    print("Graph VAE valid percentage: {:.2f}%".format(valid_pct_graph))
+    print(f"SMILES VAE valid percentage: {valid_pct_direct:.2f}%")
+    print(f"Graph VAE valid percentage: {valid_pct_graph:.2f}%")
 
 
 if __name__ == "__main__":
