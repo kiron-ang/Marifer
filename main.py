@@ -1,17 +1,28 @@
 """
-Main script to train two Variational Autoencoders (VAEs) for molecular generation.
-One VAE uses SMILES strings directly and the other uses a dummy graph representation.
-After training, each VAE generates 1000 molecules and the percentage of valid molecules
-is computed using RDKit.
+Main script to train two Variational Autoencoders for molecular generation.
+One model, StringVariations, works directly with SMILES strings,
+and the other, GraphVariations, works on a dummy graph representation.
+After training, each model generates 1000 molecules and the percentage
+of valid molecules is computed using RDKit. All console output is logged
+into 'output.log'. The generated molecules are saved in
+'StringVariations.txt' and 'GraphVariations.txt'.
 """
 
+import sys
 import argparse
+import logging
 import hashlib
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras  # pylint: disable=import-error
-import tensorflow_datasets as tfds
+from tensorflow import keras
 from rdkit import Chem
+
+# Set up logging to output both to console and to a file.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("output.log"), logging.StreamHandler()]
+)
 
 
 # -------------------- Utility Functions -------------------- #
@@ -150,11 +161,11 @@ def preprocess_data(input_path):
     Returns:
         tuple: (encoded_smiles, char_to_index, index_to_char, max_length, graph_data)
     """
-    print(f"Reading SMILES data from: {input_path}")
+    logging.info("Reading SMILES data from: %s", input_path)
     smiles_list = read_smiles(input_path)
     if not smiles_list:
-        print("No SMILES strings found in the input file.")
-        exit(1)
+        logging.error("No SMILES strings found in the input file.")
+        sys.exit(1)
     char_to_index, index_to_char = create_smiles_tokenizer(smiles_list)
     max_length = max(len(smi) for smi in smiles_list)
     encoded_smiles = np.array(
@@ -166,7 +177,7 @@ def preprocess_data(input_path):
         [encode_graph(smi, graph_dim) for smi in smiles_list],
         dtype=np.float32
     )
-    print("Data preprocessing complete.")
+    logging.info("Data preprocessing complete.")
     return encoded_smiles, char_to_index, index_to_char, max_length, graph_data
 
 
@@ -193,60 +204,103 @@ class Sampling(keras.layers.Layer):
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
     def get_config(self):
+        """
+        Returns the config of the layer.
+        """
         config = super().get_config()
         return config
 
 
-class SmilesVAE(keras.Model):
+class StringVariations(keras.Model):
     """
     Variational Autoencoder that works directly with SMILES strings.
     """
 
     def __init__(self, vocab_size, max_length, latent_dim=32):
         """
-        Initializes the SmilesVAE.
+        Initializes the StringVariations model.
 
         Args:
             vocab_size (int): Size of the SMILES character vocabulary.
             max_length (int): Maximum length of SMILES sequences.
             latent_dim (int): Dimensionality of the latent space.
         """
-        super(SmilesVAE, self).__init__()
+        super().__init__()
         self.max_length = max_length
         self.latent_dim = latent_dim
         self.vocab_size = vocab_size
-        self.embedding = keras.layers.Embedding(
-            input_dim=vocab_size + 1, output_dim=64, mask_zero=True, name="embedding"
-        )
-        self.encoder_lstm = keras.layers.LSTM(64, name="encoder_lstm")
-        self.z_mean_dense = keras.layers.Dense(latent_dim, name="z_mean")
-        self.z_log_var_dense = keras.layers.Dense(latent_dim, name="z_log_var")
-        self.sampling = Sampling(name="sampling")
-        self.repeat_vector = keras.layers.RepeatVector(max_length, name="repeat_vector")
-        self.decoder_lstm = keras.layers.LSTM(64, return_sequences=True, name="decoder_lstm")
-        self.decoder_dense = keras.layers.TimeDistributed(
-            keras.layers.Dense(vocab_size + 1, activation="softmax"), name="decoder_output"
-        )
+
+        # Build encoder model
+        encoder_inputs = keras.Input(shape=(max_length,), name="string_encoder_input")
+        x = keras.layers.Embedding(input_dim=vocab_size + 1, output_dim=64,
+                                   mask_zero=True, name="string_embedding")(encoder_inputs)
+        x = keras.layers.LSTM(64, name="string_encoder_lstm")(x)
+        z_mean = keras.layers.Dense(latent_dim, name="string_z_mean")(x)
+        z_log_var = keras.layers.Dense(latent_dim, name="string_z_log_var")(x)
+        z = Sampling(name="string_sampling")([z_mean, z_log_var])
+        self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
+                                   name="string_variations_encoder")
+
+        # Build decoder model
+        latent_inputs = keras.Input(shape=(latent_dim,), name="string_z_sampling")
+        x = keras.layers.RepeatVector(max_length, name="string_repeat_vector")(latent_inputs)
+        x = keras.layers.LSTM(64, return_sequences=True, name="string_decoder_lstm")(x)
+        decoder_outputs = keras.layers.TimeDistributed(
+            keras.layers.Dense(vocab_size + 1, activation="softmax"),
+            name="string_decoder_output"
+        )(x)
+        self.decoder = keras.Model(latent_inputs, decoder_outputs,
+                                   name="string_variations_decoder")
+
         self.total_loss_tracker = keras.metrics.Mean(name="loss")
 
     def encode(self, x):
-        x = self.embedding(x)
-        x = self.encoder_lstm(x)
-        z_mean = self.z_mean_dense(x)
-        z_log_var = self.z_log_var_dense(x)
-        z = self.sampling([z_mean, z_log_var])
-        return z_mean, z_log_var, z
+        """
+        Encodes the input data into latent variables.
+
+        Args:
+            x (Tensor): Input tensor.
+
+        Returns:
+            tuple: (z_mean, z_log_var, z)
+        """
+        return self.encoder(x)
 
     def decode(self, z):
-        x = self.repeat_vector(z)
-        x = self.decoder_lstm(x)
-        return self.decoder_dense(x)
+        """
+        Decodes the latent vector back to the original space.
+
+        Args:
+            z (Tensor): Latent vector.
+
+        Returns:
+            Tensor: Reconstructed output.
+        """
+        return self.decoder(z)
 
     def call(self, x):
-        z_mean, z_log_var, z = self.encode(x)
+        """
+        Forward pass through the model.
+
+        Args:
+            x (Tensor): Input tensor.
+
+        Returns:
+            Tensor: Reconstructed output.
+        """
+        _, _, z = self.encode(x)
         return self.decode(z)
 
     def train_step(self, data):
+        """
+        Custom training step for the model.
+
+        Args:
+            data (Tensor): Input data.
+
+        Returns:
+            dict: Loss metrics.
+        """
         if isinstance(data, tuple):
             data = data[0]
         with tf.GradientTape() as tape:
@@ -255,9 +309,9 @@ class SmilesVAE(keras.Model):
             reconstruction_loss = tf.reduce_mean(
                 keras.losses.sparse_categorical_crossentropy(data, reconstruction)
             ) * self.max_length
-            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var -
-                                            tf.square(z_mean) -
-                                            tf.exp(z_log_var))
+            kl_loss = -0.5 * tf.reduce_mean(
+                1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)
+            )
             loss = reconstruction_loss + kl_loss
         grads = tape.gradient(loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -265,6 +319,16 @@ class SmilesVAE(keras.Model):
         return {"loss": self.total_loss_tracker.result()}
 
     def generate(self, num_samples, index_to_char):
+        """
+        Generates SMILES strings by sampling from the latent space.
+
+        Args:
+            num_samples (int): Number of molecules to generate.
+            index_to_char (dict): Mapping from token indices to characters.
+
+        Returns:
+            list: Generated SMILES strings.
+        """
         latent_samples = np.random.normal(size=(num_samples, self.latent_dim))
         preds = self.decode(latent_samples)
         generated = []
@@ -275,7 +339,7 @@ class SmilesVAE(keras.Model):
         return generated
 
 
-class GraphVAE(keras.Model):
+class GraphVariations(keras.Model):
     """
     Variational Autoencoder that works on a dummy graph representation.
     In a full implementation, the encoder/decoder would operate on actual graph data.
@@ -283,49 +347,91 @@ class GraphVAE(keras.Model):
 
     def __init__(self, input_dim, latent_dim=32):
         """
-        Initializes the GraphVAE.
+        Initializes the GraphVariations model.
 
         Args:
             input_dim (int): Dimensionality of the graph representation.
             latent_dim (int): Dimensionality of the latent space.
         """
-        super(GraphVAE, self).__init__()
+        super().__init__()
         self.input_dim = input_dim
         self.latent_dim = latent_dim
-        self.dense1 = keras.layers.Dense(128, activation="relu", name="graph_dense1")
-        self.z_mean_dense = keras.layers.Dense(latent_dim, name="graph_z_mean")
-        self.z_log_var_dense = keras.layers.Dense(latent_dim, name="graph_z_log_var")
-        self.sampling = Sampling(name="graph_sampling")
-        self.dense2 = keras.layers.Dense(128, activation="relu", name="graph_dense2")
-        self.decoder_output = keras.layers.Dense(input_dim, activation="sigmoid",
-                                                   name="graph_decoder_output")
+
+        # Build encoder model
+        encoder_inputs = keras.Input(shape=(input_dim,), name="graph_encoder_input")
+        x = keras.layers.Dense(128, activation="relu", name="graph_dense1")(encoder_inputs)
+        z_mean = keras.layers.Dense(latent_dim, name="graph_z_mean")(x)
+        z_log_var = keras.layers.Dense(latent_dim, name="graph_z_log_var")(x)
+        z = Sampling(name="graph_sampling")([z_mean, z_log_var])
+        self.encoder = keras.Model(encoder_inputs, [z_mean, z_log_var, z],
+                                   name="graph_variations_encoder")
+
+        # Build decoder model
+        latent_inputs = keras.Input(shape=(latent_dim,), name="graph_z_sampling")
+        x = keras.layers.Dense(128, activation="relu", name="graph_dense2")(latent_inputs)
+        decoder_outputs = keras.layers.Dense(input_dim, activation="sigmoid",
+                                             name="graph_decoder_output")(x)
+        self.decoder = keras.Model(latent_inputs, decoder_outputs,
+                                   name="graph_variations_decoder")
+
         self.total_loss_tracker = keras.metrics.Mean(name="loss")
 
     def encode(self, x):
-        x = self.dense1(x)
-        z_mean = self.z_mean_dense(x)
-        z_log_var = self.z_log_var_dense(x)
-        z = self.sampling([z_mean, z_log_var])
-        return z_mean, z_log_var, z
+        """
+        Encodes the input graph data into latent variables.
+
+        Args:
+            x (Tensor): Input tensor.
+
+        Returns:
+            tuple: (z_mean, z_log_var, z)
+        """
+        return self.encoder(x)
 
     def decode(self, z):
-        x = self.dense2(z)
-        return self.decoder_output(x)
+        """
+        Decodes the latent vector back to the graph representation.
+
+        Args:
+            z (Tensor): Latent vector.
+
+        Returns:
+            Tensor: Reconstructed graph representation.
+        """
+        return self.decoder(z)
 
     def call(self, x):
-        z_mean, z_log_var, z = self.encode(x)
+        """
+        Forward pass through the model.
+
+        Args:
+            x (Tensor): Input tensor.
+
+        Returns:
+            Tensor: Reconstructed output.
+        """
+        _, _, z = self.encode(x)
         return self.decode(z)
 
     def train_step(self, data):
+        """
+        Custom training step for the model.
+
+        Args:
+            data (Tensor): Input data.
+
+        Returns:
+            dict: Loss metrics.
+        """
         if isinstance(data, tuple):
             data = data[0]
         with tf.GradientTape() as tape:
             z_mean, z_log_var, z = self.encode(data)
             reconstruction = self.decode(z)
             reconstruction_loss = tf.reduce_mean(tf.square(data - reconstruction))
-            kl_loss = -0.5 * tf.reduce_mean(1 + z_log_var -
-                                            tf.square(z_mean) -
-                                            tf.exp(z_log_var))
+            kl_loss = -0.5 * tf.reduce_mean(
+                1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var)
+            )
             loss = reconstruction_loss + kl_loss
         grads = tape.gradient(loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
@@ -333,11 +439,21 @@ class GraphVAE(keras.Model):
         return {"loss": self.total_loss_tracker.result()}
 
     def generate(self, num_samples):
+        """
+        Generates graph representations by sampling from the latent space,
+        then decodes them into SMILES strings using a dummy conversion.
+
+        Args:
+            num_samples (int): Number of molecules to generate.
+
+        Returns:
+            list: Generated SMILES strings.
+        """
         latent_samples = np.random.normal(size=(num_samples, self.latent_dim))
         preds = self.decode(latent_samples)
         generated = []
-        for pred in preds:
-            smiles = decode_graph(pred)
+        for _ in preds:
+            smiles = decode_graph(None)
             generated.append(smiles)
         return generated
 
@@ -345,8 +461,9 @@ class GraphVAE(keras.Model):
 # -------------------- Main Function -------------------- #
 def main():
     """
-    Main function that reads data, trains both VAE models, generates molecules,
-    and evaluates the validity of the generated molecules.
+    Main function that reads data, trains both models, generates molecules,
+    and evaluates the validity of the generated molecules. Also stores the
+    generated molecules into files.
     """
     parser = argparse.ArgumentParser(
         description="Train two VAEs for molecular generation and evaluate validity."
@@ -361,43 +478,52 @@ def main():
     )
     args = parser.parse_args()
 
-    print("Starting preprocessing of SMILES data.")
+    logging.info("Starting preprocessing of SMILES data.")
     (encoded_smiles, char_to_index, index_to_char,
      max_length, graph_data) = preprocess_data(args.input)
 
-    # Initialize and train SMILES VAE
-    print("Initializing SMILES VAE.")
-    smiles_vae = SmilesVAE(vocab_size=len(char_to_index), max_length=max_length)
-    smiles_vae.compile(optimizer="adam")
-    print("Training SMILES VAE...")
-    smiles_vae.fit(encoded_smiles, epochs=args.epochs, batch_size=32, verbose=2)
+    # Initialize and train StringVariations model
+    logging.info("Initializing StringVariations model.")
+    string_variations = StringVariations(vocab_size=len(char_to_index), max_length=max_length)
+    string_variations.compile(optimizer="adam")
+    logging.info("Training StringVariations for %d epochs...", args.epochs)
+    string_variations.fit(encoded_smiles, epochs=args.epochs, batch_size=32, verbose=2)
 
-    # Initialize and train Graph VAE
-    print("Initializing Graph VAE.")
-    graph_vae = GraphVAE(input_dim=graph_data.shape[1])
-    graph_vae.compile(optimizer="adam")
-    print("Training Graph VAE...")
-    graph_vae.fit(graph_data, epochs=args.epochs, batch_size=32, verbose=2)
+    # Initialize and train GraphVariations model
+    logging.info("Initializing GraphVariations model.")
+    graph_variations = GraphVariations(input_dim=graph_data.shape[1])
+    graph_variations.compile(optimizer="adam")
+    logging.info("Training GraphVariations for %d epochs...", args.epochs)
+    graph_variations.fit(graph_data, epochs=args.epochs, batch_size=32, verbose=2)
 
     num_generate = 1000
-    print(f"Generating {num_generate} molecules with SMILES VAE...")
-    generated_smiles_direct = smiles_vae.generate(num_generate, index_to_char)
-    print(f"Generating {num_generate} molecules with Graph VAE...")
-    generated_smiles_graph = graph_vae.generate(num_generate)
+    logging.info("Generating %d molecules with StringVariations...", num_generate)
+    generated_strings = string_variations.generate(num_generate, index_to_char)
+    logging.info("Generating %d molecules with GraphVariations...", num_generate)
+    generated_graphs = graph_variations.generate(num_generate)
 
-    valid_pct_direct = evaluate_generation(generated_smiles_direct)
-    valid_pct_graph = evaluate_generation(generated_smiles_graph)
+    valid_pct_string = evaluate_generation(generated_strings)
+    valid_pct_graph = evaluate_generation(generated_graphs)
 
-    print("\nSMILES VAE generated molecules (first 20 shown):")
-    for smi in generated_smiles_direct[:20]:
-        print(smi)
-    print("\nGraph VAE generated molecules (first 20 shown):")
-    for smi in generated_smiles_graph[:20]:
-        print(smi)
+    logging.info("StringVariations generated molecules (first 20 shown):")
+    for smi in generated_strings[:20]:
+        logging.info(smi)
+    logging.info("GraphVariations generated molecules (first 20 shown):")
+    for smi in generated_graphs[:20]:
+        logging.info(smi)
 
-    print("\nEvaluation Metrics:")
-    print(f"SMILES VAE valid percentage: {valid_pct_direct:.2f}%")
-    print(f"Graph VAE valid percentage: {valid_pct_graph:.2f}%")
+    logging.info("Evaluation Metrics:")
+    logging.info("StringVariations valid percentage: %.2f%%", valid_pct_string)
+    logging.info("GraphVariations valid percentage: %.2f%%", valid_pct_graph)
+
+    # Save generated molecules to files.
+    with open("StringVariations.txt", "w", encoding="utf-8") as f:
+        for smi in generated_strings:
+            f.write(smi + "\n")
+    with open("GraphVariations.txt", "w", encoding="utf-8") as f:
+        for smi in generated_graphs:
+            f.write(smi + "\n")
+    logging.info("Generated molecules saved to 'StringVariations.txt' and 'GraphVariations.txt'.")
 
 
 if __name__ == "__main__":
