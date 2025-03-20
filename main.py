@@ -28,14 +28,14 @@ tf.random.set_seed(42)
 def load_smiles(filepath):
     """
     Load SMILES strings from a text file.
-    
+
     Args:
         filepath (str): Path to the input file.
-        
+
     Returns:
         list: List of SMILES strings.
     """
-    with open(filepath, 'r') as file:
+    with open(filepath, 'r', encoding="utf-8") as file:
         smiles_list = [line.strip() for line in file if line.strip()]
     return smiles_list
 
@@ -43,12 +43,12 @@ def load_smiles(filepath):
 def preprocess_smiles(smiles_list, start_token='!', end_token='$'):
     """
     Preprocess SMILES by adding start and end tokens.
-    
+
     Args:
         smiles_list (list): List of SMILES strings.
         start_token (str): Token indicating start of sequence.
         end_token (str): Token indicating end of sequence.
-        
+
     Returns:
         list: List of processed SMILES strings.
     """
@@ -58,10 +58,10 @@ def preprocess_smiles(smiles_list, start_token='!', end_token='$'):
 def create_vocabulary(smiles_list):
     """
     Create a vocabulary mapping from characters to indices.
-    
+
     Args:
         smiles_list (list): List of SMILES strings.
-        
+
     Returns:
         tuple: (char_to_idx, idx_to_char)
     """
@@ -75,11 +75,11 @@ def create_vocabulary(smiles_list):
 def tokenize_smiles(smiles_list, char_to_idx):
     """
     Convert SMILES strings to lists of integer tokens.
-    
+
     Args:
         smiles_list (list): List of SMILES strings.
         char_to_idx (dict): Mapping from character to index.
-        
+
     Returns:
         list: List of integer sequences.
     """
@@ -95,11 +95,11 @@ def create_training_data(sequences, max_length):
     Create input and target sequences for training.
     For each sequence, the input is all characters except the last and the target is
     the same sequence shifted by one.
-    
+
     Args:
         sequences (list): List of integer sequences.
         max_length (int): Maximum sequence length for padding.
-        
+
     Returns:
         tuple: (input_data, target_data)
     """
@@ -109,7 +109,7 @@ def create_training_data(sequences, max_length):
         target_seq = seq[1:]
         input_data.append(input_seq)
         target_data.append(target_seq)
-    
+
     # Pad sequences to a fixed length.
     input_data = pad_sequences(input_data, maxlen=max_length - 1, padding='post')
     target_data = pad_sequences(target_data, maxlen=max_length - 1, padding='post')
@@ -119,13 +119,13 @@ def create_training_data(sequences, max_length):
 def build_model(vocab_size, embedding_dim=64, lstm_units=128, input_length=None):
     """
     Build and compile the TensorFlow model.
-    
+
     Args:
         vocab_size (int): Size of the vocabulary.
         embedding_dim (int): Dimension of the embedding layer.
         lstm_units (int): Number of LSTM units.
         input_length (int): Input sequence length.
-        
+
     Returns:
         tf.keras.Model: Compiled model.
     """
@@ -144,14 +144,14 @@ def build_model(vocab_size, embedding_dim=64, lstm_units=128, input_length=None)
 def sample_from_model(model, char_to_idx, idx_to_char, max_length, temperature=1.0):
     """
     Generate a SMILES string from the model using a sampling approach.
-    
+
     Args:
         model (tf.keras.Model): Trained model.
         char_to_idx (dict): Mapping from character to index.
         idx_to_char (dict): Mapping from index to character.
         max_length (int): Maximum length of generated sequence.
         temperature (float): Sampling temperature.
-        
+
     Returns:
         str: Generated SMILES string (without start and end tokens).
     """
@@ -187,10 +187,10 @@ def sample_from_model(model, char_to_idx, idx_to_char, max_length, temperature=1
 def validate_smiles(smiles):
     """
     Check if a SMILES string represents a chemically valid molecule using RDKit.
-    
+
     Args:
         smiles (str): SMILES string.
-        
+
     Returns:
         bool: True if valid, False otherwise.
     """
@@ -203,29 +203,21 @@ def main():
     Main function to load data, train the model, generate molecules,
     evaluate their validity, and output metrics and figures.
     """
-    # Define file paths.
-    input_file = 'data/train-smiles.txt'
-    output_file = 'output/output-molecules.txt'
-    if not os.path.exists('output'):
-        os.makedirs('output')
-    
     # Load and preprocess SMILES data.
-    smiles_list = load_smiles(input_file)
-    processed_smiles = preprocess_smiles(smiles_list)
-    char_to_idx, idx_to_char = create_vocabulary(processed_smiles)
+    char_to_idx, idx_to_char = create_vocabulary(preprocess_smiles(
+        load_smiles('data/train-smiles.txt')))
     sequences = tokenize_smiles(processed_smiles, char_to_idx)
     max_length = max(len(seq) for seq in sequences)
     x_train, y_train = create_training_data(sequences, max_length)
     # Expand target dimensions for sparse categorical crossentropy.
     y_train = np.expand_dims(y_train, -1)
-    
+
     # Build the model.
-    vocab_size = len(char_to_idx)
-    model = build_model(vocab_size, input_length=max_length - 1)
-    
+    model = build_model(len(char_to_idx), input_length=max_length - 1)
+
     # Train the model.
     history = model.fit(x_train, y_train, epochs=20, batch_size=64, verbose=1)
-    
+
     # Plot and save training loss.
     plt.figure()
     plt.plot(history.history['loss'], label='Training Loss')
@@ -235,35 +227,36 @@ def main():
     plt.legend()
     plt.savefig('output/training_loss.png')
     plt.close()
-    
+
     # Generate 1000 molecules.
     num_generated = 1000
     generated_smiles = []
     for _ in range(num_generated):
         gen_smiles = sample_from_model(model, char_to_idx, idx_to_char, max_length)
         generated_smiles.append(gen_smiles)
-    
+
     # Validate generated molecules.
     valid_count = sum(validate_smiles(s) for s in generated_smiles)
-    invalid_count = num_generated - valid_count
-    
+
     # Plot and save molecule validity results.
     plt.figure()
-    plt.bar(['Valid', 'Invalid'], [valid_count, invalid_count], color=['green', 'red'])
+    plt.bar(['Valid', 'Invalid'], [valid_count, num_generated - valid_count], 
+        color=['green', 'red'])
     plt.title('Generated Molecule Validity')
     plt.ylabel('Count')
     plt.savefig('output/validity.png')
     plt.close()
-    
+
     # Write generated SMILES to the output file.
-    with open(output_file, 'w') as f_out:
+    with open('data/output-molecules.txt', 'w', encoding="utf-8") as f_out:
         for s in generated_smiles:
             f_out.write(s + '\n')
-    
+
     # Print evaluation metrics.
     print(f"Generated {num_generated} molecules.")
     print(f"Valid molecules: {valid_count} ({(valid_count / num_generated) * 100:.2f}%)")
-    print(f"Invalid molecules: {invalid_count} ({(invalid_count / num_generated) * 100:.2f}%)")
+    print(f"Invalid molecules: {num_generated - valid_count} ({
+        (num_generated - valid_count / num_generated) * 100:.2f}%)")
 
 
 if __name__ == '__main__':
