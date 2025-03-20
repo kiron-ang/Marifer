@@ -9,8 +9,6 @@ Output:
   - Training loss and validity figures saved in the "output" folder.
   - A text file ("output/output-molecules.txt") containing the 1000 generated SMILES strings.
 """
-
-import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -204,8 +202,8 @@ def main():
     evaluate their validity, and output metrics and figures.
     """
     # Load and preprocess SMILES data.
-    char_to_idx, idx_to_char = create_vocabulary(preprocess_smiles(
-        load_smiles('data/train-smiles.txt')))
+    processed_smiles = preprocess_smiles(load_smiles('data/train-smiles.txt'))
+    char_to_idx, idx_to_char = create_vocabulary(processed_smiles)
     sequences = tokenize_smiles(processed_smiles, char_to_idx)
     max_length = max(len(seq) for seq in sequences)
     x_train, y_train = create_training_data(sequences, max_length)
@@ -240,7 +238,7 @@ def main():
 
     # Plot and save molecule validity results.
     plt.figure()
-    plt.bar(['Valid', 'Invalid'], [valid_count, num_generated - valid_count], 
+    plt.bar(['Valid', 'Invalid'], [valid_count, num_generated - valid_count],
         color=['green', 'red'])
     plt.title('Generated Molecule Validity')
     plt.ylabel('Count')
@@ -248,7 +246,7 @@ def main():
     plt.close()
 
     # Write generated SMILES to the output file.
-    with open('data/output-molecules.txt', 'w', encoding="utf-8") as f_out:
+    with open('output/output-molecules.txt', 'w', encoding="utf-8") as f_out:
         for s in generated_smiles:
             f_out.write(s + '\n')
 
@@ -257,6 +255,12 @@ def main():
     print(f"Valid molecules: {valid_count} ({(valid_count / num_generated) * 100:.2f}%)")
     print(f"Invalid molecules: {num_generated - valid_count} ({
         (num_generated - valid_count / num_generated) * 100:.2f}%)")
+
+    with open('output//output-results.txt', 'w', encoding="utf-8") as f_out:
+        f_out.write(f"Generated {num_generated} molecules.")
+        f_out.write(f"Valid molecules: {valid_count} ({(valid_count / num_generated) * 100:.2f}%)")
+        f_out.write(f"Invalid molecules: {num_generated - valid_count} ({
+            (num_generated - valid_count / num_generated) * 100:.2f}%)")
 
 
 if __name__ == '__main__':
