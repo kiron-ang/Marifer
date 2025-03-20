@@ -1,0 +1,1 @@
+Generated 2000 molecules.Valid molecules: 1948 (97.40%)Invalid molecules: 52 (199902.60%)

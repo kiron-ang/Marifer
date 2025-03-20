@@ -214,7 +214,7 @@ def main():
     model = build_model(len(char_to_idx), input_length=max_length - 1)
 
     # Train the model.
-    history = model.fit(x_train, y_train, epochs=20, batch_size=64, verbose=1)
+    history = model.fit(x_train, y_train, epochs=50, batch_size=64, verbose=1)
 
     # Plot and save training loss.
     plt.figure()
@@ -226,8 +226,8 @@ def main():
     plt.savefig('output/training_loss.png')
     plt.close()
 
-    # Generate 1000 molecules.
-    num_generated = 1000
+    # Generate molecules.
+    num_generated = 2000
     generated_smiles = []
     for _ in range(num_generated):
         gen_smiles = sample_from_model(model, char_to_idx, idx_to_char, max_length)
