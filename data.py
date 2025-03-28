@@ -14,5 +14,5 @@ def txt(dataset):
         for f in features:
             with open("data/" + split + "-" + f + ".txt", "w", encoding = "utf-8") as txtfile:
                 for d in dataset[split]:
-                    txtfile.write(d[f])
+                    txtfile.write(d[f].numpy())
 txt("qm9/dimenet")
