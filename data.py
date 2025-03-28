@@ -1,7 +1,9 @@
 """Build qm9/dimenet and create .txt files from its features!"""
+import os
 import tensorflow_datasets as tfds
 def txt(dataset):
     """Creates .txt files from a Tensorflow Dataset!"""
+    os.makedirs("data")
     dataset = tfds.load(dataset)
     for split in dataset:
         features = []
