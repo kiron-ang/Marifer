@@ -28,14 +28,14 @@ def load_smiles(file_path):
     return [s.strip() for s in smiles]
 
 
-def preprocess_smiles(smiles, tokenizer=None, max_length=100):
+def preprocess_smiles(smiles, tokenizer=None, max_length=20):
     """
     Preprocess the SMILES strings.
 
     Args:
         smiles (list): List of SMILES strings.
         tokenizer (Tokenizer, optional): Tokenizer for the SMILES strings. Defaults to None.
-        max_length (int, optional): Maximum length of the SMILES strings. Defaults to 100.
+        max_length (int, optional): Maximum length of the SMILES strings. Defaults to 20.
 
     Returns:
         tuple: Padded sequences and tokenizer.
@@ -48,7 +48,7 @@ def preprocess_smiles(smiles, tokenizer=None, max_length=100):
     return padded_sequences, tokenizer
 
 
-def create_lstm_model(vocab_size, embedding_dim=128, lstm_units=256, max_length=100):
+def create_lstm_model(vocab_size, embedding_dim=128, lstm_units=256, max_length=20):
     """
     Define the LSTM model.
 
@@ -56,7 +56,7 @@ def create_lstm_model(vocab_size, embedding_dim=128, lstm_units=256, max_length=
         vocab_size (int): Vocabulary size.
         embedding_dim (int, optional): Dimension of the embedding layer. Defaults to 128.
         lstm_units (int, optional): Number of LSTM units. Defaults to 256.
-        max_length (int, optional): Maximum length of the input sequences. Defaults to 100.
+        max_length (int, optional): Maximum length of the input sequences. Defaults to 20.
 
     Returns:
         Sequential: Compiled LSTM model.
@@ -71,15 +71,15 @@ def create_lstm_model(vocab_size, embedding_dim=128, lstm_units=256, max_length=
     return model
 
 
-def generate_molecules(model, tokenizer, num_molecules=100, max_length=100):
+def generate_molecules(model, tokenizer, num_molecules=200, max_length=20):
     """
     Generate new molecules using the trained model.
 
     Args:
         model (Sequential): Trained LSTM model.
         tokenizer (Tokenizer): Tokenizer for the SMILES strings.
-        num_molecules (int, optional): Number of molecules to generate. Defaults to 100.
-        max_length (int, optional): Maximum length of the generated SMILES strings. Defaults to 100.
+        num_molecules (int, optional): Number of molecules to generate. Defaults to 20.
+        max_length (int, optional): Maximum length of the generated SMILES strings. Defaults to 20.
 
     Returns:
         list: List of generated SMILES strings.
