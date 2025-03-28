@@ -1,7 +1,6 @@
 """Build qm9/dimenet and create .txt files from its features!"""
 import os
 import tensorflow_datasets as tfds
-tfds.load("qm9/dimenet")
 def txt(config):
     """Creates .txt files from a Tensorflow Dataset!"""
     os.makedirs("data", exist_ok = True)
