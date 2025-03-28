@@ -5,15 +5,15 @@ train = qm9["train"]
 validation = qm9["validation"]
 test = qm9["test"]
 def txt(data, prefix):
+    """Writes data to .txt files"""
     features = []
     for d in data:
-        for d_ in data:
+        for d_ in d:
             features.append(d_)
         break
     for f in features:
-        txt = open(prefix + f + ".txt")
-        txt.write(f)
-        txt.close()
+        with open("data/" + prefix + f + ".txt") as txtfile:
+            txtfile.write("f")
 txt(train, "train-")
 txt(validation, "validation-")
 txt(test, "test-")
