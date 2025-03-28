@@ -10,5 +10,5 @@ dependencies = [
     "rdkit",
     "scikit-learn",
     "tensorflow-cpu",
-    "tensorflow-datasets",
+    "tfds-nightly",
 ]

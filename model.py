@@ -5,7 +5,6 @@ and assesses the model's performance using specified chemistry-related criteria.
 
 import os
 import numpy as np
-import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Embedding
 from tensorflow.keras.preprocessing.text import Tokenizer
@@ -24,7 +23,7 @@ def load_smiles(file_path):
     Returns:
         list: List of SMILES strings.
     """
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding = "utf-8") as file:
         smiles = file.readlines()
     return [s.strip() for s in smiles]
 
@@ -155,7 +154,7 @@ def main():
 
     # Save generated molecules to file
     os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
-    with open(output_file_path, 'w') as file:
+    with open(output_file_path, 'w', encoding = "utf-8") as file:
         for s in generated_smiles:
             file.write(s + '\n')
 
@@ -164,7 +163,8 @@ def main():
     print(f'Validity: {valid:.2f}, Uniqueness: {unique:.2f}, Novelty: {novel:.2f}')
 
     # Calculate properties for each generated molecule
-    properties = [calculate_properties(s) for s in generated_smiles if Chem.MolFromSmiles(s) is not None]
+    properties = [calculate_properties(s) for s in generated_smiles if
+                        Chem.MolFromSmiles(s) is not None]
     if properties:
         logps, qeds = zip(*[p for p in properties if p is not None])
         print(f'Average logP: {np.mean(logps):.2f}, Average QED: {np.mean(qeds):.2f}')
