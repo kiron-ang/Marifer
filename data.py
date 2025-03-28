@@ -12,7 +12,7 @@ def txt(data, prefix):
             features.append(d_)
         break
     for f in features:
-        with open("data/" + prefix + f + ".txt") as txtfile:
+        with open("data/" + prefix + f + ".txt", "w", "utf-8") as txtfile:
             txtfile.write("f")
 txt(train, "train-")
 txt(validation, "validation-")
