@@ -28,19 +28,19 @@ X, y = sequences[:, :-1], sequences[:, -1]
 y = tf.keras.utils.to_categorical(y, num_classes=total_chars)
 model = Sequential([
     Embedding(total_chars, 50, input_length=max_sequence_len-1),
-    LSTM(100, return_sequences=True),
-    LSTM(100),
+    LSTM(10, return_sequences=True),
+    LSTM(10),
     Dense(total_chars, activation="softmax")
 ])
 model.compile(loss="categorical_crossentropy", optimizer="adam")
 plt.figure()
-plt.plot(model.fit(X, y, epochs=100).history["loss"])
+plt.plot(model.fit(X, y, epochs=10).history["loss"])
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.savefig("model/loss-epoch.png")
 plt.close()
 generated_smiles = []
-for i in range(1000):
+for i in range(100):
     text = []
     for _ in range(max_sequence_len):
         token_list = tokenizer.texts_to_sequences(["".join(text)])[0]
