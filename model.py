@@ -34,9 +34,10 @@ model = Sequential([
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
 history = model.fit(X, y, epochs=10, batch_size=64)
 print(f"{history=}")
-def generate_smiles(initial_text, max_length):
-    """Generate SMILES strings!"""
-    for _ in range(max_length):
+generated_smiles = []
+for i in range(1000):
+    initial_text = "C"
+    for _ in range(max_sequence_len):
         token_list = tokenizer.texts_to_sequences([initial_text])[0]
         token_list = pad_sequences([token_list], maxlen=max_sequence_len-1, padding="pre")
         predicted = np.argmax(model.predict(token_list), axis=-1)
@@ -44,17 +45,17 @@ def generate_smiles(initial_text, max_length):
         initial_text += next_char
         if next_char == "\n":
             break
-    return initial_text
-generated_smiles = generate_smiles("C", max_sequence_len)
+    generated_smiles.append(initial_text)
 with open("model/output.txt", "w", encoding="utf-8") as output_file:
-    output_file.write(generated_smiles)
-def generate_figures():
-    """Generate figures for final report!"""
-    plt.figure(figsize=(10, 5))
-    plt.plot(history.history["loss"], label="Loss")
-    plt.title("Model Loss")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("figures/metrics.png")
+    for g in generated_smiles:
+        output_file.write(g)
+for g in generated_smiles:
+    print(g)
+plt.figure(figsize=(10, 5))
+plt.plot(history.history["loss"], label="Loss")
+plt.title("Model Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend()
+plt.tight_layout()
+plt.savefig("figures/metrics.png")
