@@ -3,6 +3,8 @@ import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from rdkit import Chem
+from rdkit.Chem import Descriptors
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Embedding
 from tensorflow.keras.preprocessing.text import Tokenizer
@@ -36,21 +38,30 @@ history = model.fit(X, y, epochs=10, batch_size=64)
 print(f"{history=}")
 generated_smiles = []
 for i in range(1000):
-    initial_text = "C"
+    text = []
     for _ in range(max_sequence_len):
-        token_list = tokenizer.texts_to_sequences([initial_text])[0]
+        token_list = tokenizer.texts_to_sequences(["".join(text)])[0]
         token_list = pad_sequences([token_list], maxlen=max_sequence_len-1, padding="pre")
         predicted = np.argmax(model.predict(token_list), axis=-1)
         next_char = tokenizer.index_word[predicted[0]]
-        initial_text += next_char
+        text.append(next_char)
         if next_char == "\n":
             break
-    generated_smiles.append(initial_text)
+    generated_smiles.append("".join(text))
 with open("model/output.txt", "w", encoding="utf-8") as output_file:
     for g in generated_smiles:
         output_file.write(g)
+valid_smiles = []
+molecular_weights = []
 for g in generated_smiles:
-    print(g)
+    mol = Chem.MolFromSmiles(g)
+    if mol is None:
+        valid_smiles.append(0)
+        molecular_weights.append("")
+        continue
+    else:
+        valid_smiles.append(1)
+        molecular_weights.append(Descriptors.MolWt(mol))
 plt.figure(figsize=(10, 5))
 plt.plot(history.history["loss"], label="Loss")
 plt.title("Model Loss")
