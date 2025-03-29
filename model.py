@@ -73,18 +73,18 @@ def calculate_molecular_weight(smiles):
         return Descriptors.MolWt(mol)
     return 0
 
-def sample_with_temperature(predictions, temp=1.0):
+def sample_with_temperature(preds, temp=1.0):
     """
     Sample an index from a probability array using temperature sampling.
 
     Args:
-        predictions (numpy.ndarray): Array of prediction probabilities.
+        preds (numpy.ndarray): Array of prediction probabilities.
         temp (float): Temperature parameter to control diversity. Default is 1.0
 
     Returns:
         int: Index of the sampled element.
     """
-    preds = np.asarray(predictions).astype('float64')
+    preds = np.asarray(preds).astype('float64')
     preds = np.log(preds + 1e-10) / temp
     exp_preds = np.exp(preds)
     preds = exp_preds / np.sum(exp_preds)
