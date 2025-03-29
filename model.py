@@ -1,6 +1,4 @@
-"""
-This module defines and trains a variational autoencoder (VAE) to produce novel SMILES strings.
-"""
+"""PLACEHOLDER"""
 
 import os
 import numpy as np
@@ -14,45 +12,38 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras import backend as K
 
-def model(num_samples=1000, temperature=0.8):
-    """
-    Train a variational autoencoder (VAE) to produce novel SMILES strings.
+def load_smiles_data(file_path):
+    """Load SMILES strings from a file."""
+    with open(file_path, "r", encoding="utf-8") as file:
+        return file.readlines()
 
-    Args:
-        num_samples (int): Number of SMILES strings to generate. Default is 1000.
-        temperature (float): Temperature parameter to control diversity. Default is 0.8.
-
-    Returns:
-        None
-    """
-
-    # Create model directory if it does not exist
-    os.makedirs("model", exist_ok=True)
-
-    # Load the SMILES strings from the training data file
-    with open("data/train-SMILES.txt", "r", encoding="utf-8") as file:
-        smiles_strings = file.readlines()
-
-    # Tokenize the SMILES strings
+def tokenize_smiles(smiles_strings):
+    """Tokenize the SMILES strings."""
     tokenizer = Tokenizer(char_level=True)
     tokenizer.fit_on_texts(smiles_strings)
-    total_chars = len(tokenizer.word_index) + 1
+    return tokenizer
 
-    # Prepare the sequences for training
+def prepare_sequences(smiles_strings, tokenizer):
+    """Prepare sequences for training."""
     sequences = []
     for smile in smiles_strings:
         encoded = tokenizer.texts_to_sequences([smile])[0]
         for i in range(1, len(encoded)):
             sequence = encoded[:i+1]
             sequences.append(sequence)
-
     max_sequence_len = max(len(seq) for seq in sequences)
     sequences = pad_sequences(sequences, maxlen=max_sequence_len, padding="pre")
-    X = sequences[:, :-1]
-    y = sequences[:, -1]
-    y = tf.keras.utils.to_categorical(y, num_classes=total_chars)
+    return sequences, max_sequence_len
 
-    # Define VAE model architecture
+def split_sequences(sequences):
+    """Split sequences into input and output."""
+    x = sequences[:, :-1]
+    y = sequences[:, -1]
+    y = tf.keras.utils.to_categorical(y, num_classes=len(tokenizer.word_index) + 1)
+    return x, y
+
+def define_vae_model(max_sequence_len, total_chars):
+    """Define the VAE model architecture."""
     latent_dim = 100
 
     # Encoder
@@ -77,28 +68,37 @@ def model(num_samples=1000, temperature=0.8):
     vae_outputs = decoder(encoder(inputs)[2])
     vae = Model(inputs, vae_outputs, name='vae')
 
-    # Loss functions
-    reconstruction_loss = tf.keras.losses.categorical_crossentropy(y, vae_outputs)
-    reconstruction_loss *= max_sequence_len-1
-    kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
+    return encoder, decoder, vae
+
+def compile_vae_model(vae, y):
+    """Compile the VAE model."""
+    reconstruction_loss = tf.keras.losses.categorical_crossentropy(y, vae.outputs)
+    reconstruction_loss *= vae.input_shape[1]
+    kl_loss = 1 + vae.encoder.layers[-3].output[1] - K.square(vae.encoder.layers[-3].output[0]) -
+                K.exp(vae.encoder.layers[-3].output[1])
     kl_loss = K.sum(kl_loss, axis=-1)
     kl_loss *= -0.5
     vae_loss = K.mean(reconstruction_loss + kl_loss)
     vae.add_loss(vae_loss)
     vae.compile(optimizer='adam')
+    return vae
 
-    # Train the model
+def train_vae_model(vae, x, y):
+    """Train the VAE model."""
     plt.figure()
-    plt.plot(vae.fit(X, y, epochs=100).history["loss"])
+    history = vae.fit(x, y, epochs=100)
+    plt.plot(history.history["loss"])
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.savefig("model/loss-epoch.png")
     plt.close()
 
+def generate_smiles(encoder, decoder, num_samples, temperature, tokenizer):
+    """Generate novel SMILES strings."""
     generated_smiles = []
     molecular_weights = []
     for _ in range(num_samples):
-        z_sample = np.random.normal(size=(1, latent_dim))
+        z_sample = np.random.normal(size=(1, 100))
         decoded_sequence = decoder.predict(z_sample)
         text = []
         for char_prob in decoded_sequence[0]:
@@ -120,15 +120,50 @@ def model(num_samples=1000, temperature=0.8):
         else:
             molecular_weights.append(0)
 
-    # Save the generated SMILES strings to a file
+    return generated_smiles, molecular_weights
+
+def save_smiles_and_weights(generated_smiles, molecular_weights):
+    """Save the generated SMILES strings and molecular weights to files."""
     with open("model/SMILES.txt", "w", encoding="utf-8") as output_file:
         for g in generated_smiles:
             output_file.write(g + "\n")
 
-    # Save the molecular weights to a file
     with open("model/MolWt.txt", "w", encoding="utf-8") as mw_file:
         for mw in molecular_weights:
             mw_file.write(f"{mw}\n")
 
-# Call the function
-model(num_samples=1000, temperature=0.8)
+def main(num_samples=1000, temperature=0.8):
+    """Main function to train a VAE and generate SMILES strings."""
+    # Create model directory if it does not exist
+    os.makedirs("model", exist_ok=True)
+
+    # Load SMILES data
+    smiles_strings = load_smiles_data("data/train-SMILES.txt")
+
+    # Tokenize SMILES strings
+    global tokenizer
+    tokenizer = tokenize_smiles(smiles_strings)
+
+    # Prepare sequences
+    sequences, max_sequence_len = prepare_sequences(smiles_strings, tokenizer)
+    x, y = split_sequences(sequences)
+
+    # Define VAE model
+    total_chars = len(tokenizer.word_index) + 1
+    encoder, decoder, vae = define_vae_model(max_sequence_len, total_chars)
+
+    # Compile VAE model
+    vae = compile_vae_model(vae, y)
+
+    # Train VAE model
+    train_vae_model(vae, x, y)
+
+    # Generate SMILES strings
+    generated_smiles, molecular_weights = generate_smiles(encoder, decoder, 
+                                            num_samples, temperature, tokenizer)
+
+    # Save SMILES strings and molecular weights
+    save_smiles_and_weights(generated_smiles, molecular_weights)
+
+if __name__ == "__main__":
+    main(num_samples=1000, temperature=0.8)
