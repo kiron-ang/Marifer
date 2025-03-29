@@ -73,19 +73,19 @@ def calculate_molecular_weight(smiles):
         return Descriptors.MolWt(mol)
     return 0
 
-def sample_with_temperature(preds, temperature=1.0):
+def sample_with_temperature(predictions, temp=1.0):
     """
     Sample an index from a probability array using temperature sampling.
 
     Args:
-        preds (numpy.ndarray): Array of prediction probabilities.
-        temperature (float): Temperature parameter to control diversity. Default is 1.0
+        predictions (numpy.ndarray): Array of prediction probabilities.
+        temp (float): Temperature parameter to control diversity. Default is 1.0
 
     Returns:
         int: Index of the sampled element.
     """
-    preds = np.asarray(preds).astype('float64')
-    preds = np.log(preds + 1e-10) / temperature
+    preds = np.asarray(predictions).astype('float64')
+    preds = np.log(preds + 1e-10) / temp
     exp_preds = np.exp(preds)
     preds = exp_preds / np.sum(exp_preds)
     probas = np.random.multinomial(1, preds, 1)
@@ -94,21 +94,19 @@ def sample_with_temperature(preds, temperature=1.0):
 # Generate new SMILES strings with temperature sampling
 generated_smiles = []
 molecular_weights = []
-temperature = 0.8  # Adjust temperature for diversity
 for i in range(100):
     text = []
     for _ in range(max_sequence_len):
         token_list = tokenizer.texts_to_sequences(["".join(text)])[0]
         token_list = pad_sequences([token_list], maxlen=max_sequence_len-1, padding="pre")
-        preds = model.predict(token_list, verbose=0)[0]
-        next_index = sample_with_temperature(preds, temperature)
+        predictions = model.predict(token_list, verbose=0)[0]
+        next_index = sample_with_temperature(predictions, 0.8)
         next_char = tokenizer.index_word[next_index]
         text.append(next_char)
         if next_char == "\n":
             break
-    smile = "".join(text)
-    generated_smiles.append(smile)
-    molecular_weights.append(calculate_molecular_weight(smile))
+    generated_smiles.append("".join(text))
+    molecular_weights.append(calculate_molecular_weight("".join(text)))
 
 # Save the generated SMILES strings to a file
 with open("model/SMILES.txt", "w", encoding="utf-8") as output_file:
