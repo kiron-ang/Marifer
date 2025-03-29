@@ -1,5 +1,6 @@
 """Generate molecules!"""
 import subprocess
-subprocess.run("uv run tfds build qm9/dimenet", check=True)
-subprocess.run("uv run data.py", check=True)
-subprocess.run("uv run model.py", check=True)
+import os
+subprocess.run("uv run tfds build qm9/dimenet", check=True, cwd=os.getcwd())
+subprocess.run("uv run data.py", check=True, cwd=os.getcwd())
+subprocess.run("uv run model.py", check=True, cwd=os.getcwd())
