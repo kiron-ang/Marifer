@@ -10,7 +10,6 @@ from tensorflow.keras.layers import LSTM, Dense, Embedding
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 os.makedirs("model", exist_ok=True)
-os.makedirs("figures", exist_ok=True)
 with open("data/train-SMILES.txt", "r", encoding="utf-8") as file:
     smiles_strings = file.readlines()
 tokenizer = Tokenizer(char_level=True)
@@ -29,13 +28,17 @@ X, y = sequences[:, :-1], sequences[:, -1]
 y = tf.keras.utils.to_categorical(y, num_classes=total_chars)
 model = Sequential([
     Embedding(total_chars, 50, input_length=max_sequence_len-1),
-    LSTM(10, return_sequences=True),
-    LSTM(10),
+    LSTM(100, return_sequences=True),
+    LSTM(100),
     Dense(total_chars, activation="softmax")
 ])
-model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
-history = model.fit(X, y, epochs=10, batch_size=64)
-print(f"{history=}")
+model.compile(loss="categorical_crossentropy", optimizer="adam")
+plt.figure()
+plt.plot(model.fit(X, y, epochs=100).history["loss"])
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.savefig("model/loss-epoch.png")
+plt.close()
 generated_smiles = []
 for i in range(1000):
     text = []
@@ -48,24 +51,6 @@ for i in range(1000):
         if next_char == "\n":
             break
     generated_smiles.append("".join(text))
-with open("model/output.txt", "w", encoding="utf-8") as output_file:
+with open("model/output-SMILES.txt", "w", encoding="utf-8") as output_file:
     for g in generated_smiles:
         output_file.write(g)
-valid_smiles = []
-molecular_weights = []
-for g in generated_smiles:
-    mol = Chem.MolFromSmiles(g)
-    if mol is None:
-        valid_smiles.append(0)
-        molecular_weights.append("")
-        continue
-    valid_smiles.append(1)
-    molecular_weights.append(Descriptors.MolWt(mol))
-plt.figure(figsize=(10, 5))
-plt.plot(history.history["loss"], label="Loss")
-plt.title("Model Loss")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.legend()
-plt.tight_layout()
-plt.savefig("figures/metrics.png")
