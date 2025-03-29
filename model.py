@@ -1,4 +1,5 @@
 """PLACEHOLDER"""
+import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -6,6 +7,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Embedding
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+os.makedirs("model", exist_ok=True)
+os.makedirs("figures", exist_ok=True)
 with open("data/train-SMILES.txt", "r", encoding="utf-8") as file:
     smiles_strings = file.readlines()
 tokenizer = Tokenizer(char_level=True)
@@ -18,7 +21,7 @@ for smile in smiles_strings:
         sequence = encoded[:i+1]
         sequences.append(sequence)
 max_sequence_len = max(len(seq) for seq in sequences)
-print("max_sequence_len", max_sequence_len)
+print(f"{max_sequence_len=}")
 sequences = pad_sequences(sequences, maxlen=max_sequence_len, padding="pre")
 X, y = sequences[:, :-1], sequences[:, -1]
 y = tf.keras.utils.to_categorical(y, num_classes=total_chars)
@@ -29,8 +32,10 @@ model = Sequential([
     Dense(total_chars, activation="softmax")
 ])
 model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
-model.fit(X, y, epochs=1, batch_size=64)
+history = model.fit(X, y, epochs=10, batch_size=64)
+print(f"{history=}")
 def generate_smiles(initial_text, max_length):
+    """Generate SMILES strings!"""
     for _ in range(max_length):
         token_list = tokenizer.texts_to_sequences([initial_text])[0]
         token_list = pad_sequences([token_list], maxlen=max_sequence_len-1, padding="pre")
@@ -41,5 +46,13 @@ def generate_smiles(initial_text, max_length):
             break
     return initial_text
 generated_smiles = generate_smiles("C", max_sequence_len)
-with open("model/output.txt", 'w', encoding='utf-8') as output_file:
+with open("model/output.txt", "w", encoding="utf-8") as output_file:
     output_file.write(generated_smiles)
+plt.figure(figsize=(10, 5))
+plt.plot(history.history["loss"], label="Loss")
+plt.title("Model Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend()
+plt.tight_layout()
+plt.savefig("figures/metrics.png")
