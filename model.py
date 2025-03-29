@@ -59,9 +59,8 @@ for g in generated_smiles:
         valid_smiles.append(0)
         molecular_weights.append("")
         continue
-    else:
-        valid_smiles.append(1)
-        molecular_weights.append(Descriptors.MolWt(mol))
+    valid_smiles.append(1)
+    molecular_weights.append(Descriptors.MolWt(mol))
 plt.figure(figsize=(10, 5))
 plt.plot(history.history["loss"], label="Loss")
 plt.title("Model Loss")
