@@ -20,8 +20,8 @@ for smile in smiles_strings:
     for i in range(1, len(encoded)):
         sequence = encoded[:i+1]
         sequences.append(sequence)
+# The longest SMILES string in the training data is 29!
 max_sequence_len = max(len(seq) for seq in sequences)
-print(f"{max_sequence_len=}")
 sequences = pad_sequences(sequences, maxlen=max_sequence_len, padding="pre")
 X, y = sequences[:, :-1], sequences[:, -1]
 y = tf.keras.utils.to_categorical(y, num_classes=total_chars)
@@ -48,11 +48,13 @@ def generate_smiles(initial_text, max_length):
 generated_smiles = generate_smiles("C", max_sequence_len)
 with open("model/output.txt", "w", encoding="utf-8") as output_file:
     output_file.write(generated_smiles)
-plt.figure(figsize=(10, 5))
-plt.plot(history.history["loss"], label="Loss")
-plt.title("Model Loss")
-plt.xlabel("Epochs")
-plt.ylabel("Loss")
-plt.legend()
-plt.tight_layout()
-plt.savefig("figures/metrics.png")
+def generate_figures():
+    """Generate figures for final report!"""
+    plt.figure(figsize=(10, 5))
+    plt.plot(history.history["loss"], label="Loss")
+    plt.title("Model Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("figures/metrics.png")
