@@ -1,17 +1,5 @@
 """
-This script loads the QM9/DimeNet dataset and creates .txt files from its features.
-
-The script performs the following operations:
-1. Loads the specified TensorFlow dataset.
-2. Iterates over each split in the dataset.
-3. For each split, iterates over each feature.
-4. Creates a .txt file for each feature, containing the feature values for that split.
-
-The generated .txt files are stored in the 'data' directory in the format '{split}-{feature}.txt'.
-
-Usage:
-    Simply run the script with the desired TensorFlow dataset configuration name.
-    Example: txt("qm9/dimenet")
+This module loads the QM9/DimeNet dataset and creates .txt files from its features.
 """
 import os
 import tensorflow_datasets as tfds
