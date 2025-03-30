@@ -37,7 +37,7 @@ def returnmodel(string_list, float_list):
     return model.fit(string_tensor, float_tensor)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
-plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
+# plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
 plt.plot(returnmodel(test_SMILES, test_G_atomization).history["loss"], label="Test")
 plt.plot(returnmodel(validation_SMILES, validation_G_atomization).history["loss"],
             label="Validation")
