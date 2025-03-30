@@ -29,8 +29,12 @@ def returnmodel(string_list, float_list):
         tf.keras.layers.LSTM(units),
         tf.keras.layers.Dense(1)
     ])
+    print("CONVERTING STRING")
+    string_array = np.array(string_list, dtype=str)
+    print("CONVERTING FLOAT")
+    float_array = np.array(float_list)
     model.compile(loss="huber")
-    return model.fit(np.array(string_list, dtype=object), np.array(float_list))
+    return model.fit(string_array, float_array)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
