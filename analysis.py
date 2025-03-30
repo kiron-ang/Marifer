@@ -1,2 +1,3 @@
 """This module analyzes files from the "model" directory"""
-print("hi")
+import rdkit
+print(rdkit.__version__)
