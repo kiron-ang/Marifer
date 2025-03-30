@@ -19,8 +19,8 @@ test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
 def returnmodel(string_list, float_list):
     """Define, compile, fit, and return a new Sequential model"""
-    string_list = string_list[0:1000]
-    float_list = float_list[0:1000]
+    string_list = string_list[0:10000]
+    float_list = float_list[0:10000]
     text_vectorization_layer = tf.keras.layers.TextVectorization()
     text_vectorization_layer.adapt(string_list)
     units = len(text_vectorization_layer.get_vocabulary())
@@ -33,13 +33,15 @@ def returnmodel(string_list, float_list):
     model.compile(loss="huber")
     string_tensor = tf.constant(string_list)
     float_tensor = tf.constant(float_list)
-    return model.fit(tf.data.Dataset.from_tensor_slices((string_tensor, float_tensor)).batch(100), epochs=10)
+    return model.fit(tf.data.Dataset.from_tensor_slices((string_tensor, float_tensor)).batch(100),
+                        epochs=10)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
 plt.plot(returnmodel(test_SMILES, test_G_atomization).history["loss"], label="Test")
 plt.plot(returnmodel(validation_SMILES, validation_G_atomization).history["loss"],
             label="Validation")
+plt.title("Demonstration with first 10,000 elements from each split!")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
