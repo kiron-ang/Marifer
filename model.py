@@ -26,9 +26,9 @@ def returnmodel(string_list, float_list):
         text_vectorization_layer,
         tf.keras.layers.Embedding(units, units),
         tf.keras.layers.LSTM(units),
-        tf.keras.layers.Dense(units)
+        tf.keras.layers.Dense(1)
     ])
-    model.compile()
+    model.compile(loss="huber")
     return model.fit(tf.constant(string_list), tf.constant(float_list))
 plt.rcParams["font.family"] = "serif"
 plt.figure()
