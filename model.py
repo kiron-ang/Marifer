@@ -18,10 +18,13 @@ validation_SMILES = readlines("data/validation-SMILES.txt")
 train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
 test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
+print("Longest string in train Smiles", max(len(s) for s in train_SMILES))
+print("Longest string in test Smiles", max(len(s) for s in test_SMILES))
+print("Longest string in validation Smiles", max(len(s) for s in validation_SMILES_SMILES))
 
 model = models.Sequential([
     layers.TextVectorization(),
-    layers.Embedding(),
+    layers.Embedding(100, 100),
     layers.LSTM(),
     layers.Dense()
 ])
