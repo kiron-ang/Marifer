@@ -30,7 +30,7 @@ def returnmodel(string_list, float_list):
         tf.keras.layers.Dense(1)
     ])
     print("CONVERTING STRING")
-    string_array = np.array(string_list, dtype=str)
+    string_array = np.array(string_list)
     print("CONVERTING FLOAT")
     float_array = np.array(float_list)
     model.compile(loss="huber")
