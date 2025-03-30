@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 from rdkit import Chem
 from tensorflow.keras import layers, models
+import numpy as np
 def readlines(path):
     """Read file from path and return a list of lines"""
     with open(path, "r", encoding="utf-8") as f:
@@ -28,23 +29,21 @@ def compilemodel():
     ])
     model.compile()
     return model
-def fitmodel(data, labels):
+def fitmodel(model, features_list, labels_list):
     """Fit an existing model to existing data"""
-    vectorizer = layers.TextVectorization()
-    vectorizer.adapt(train_SMILES)
-    train_features = vectorizer(train_SMILES)
-    validation_features = vectorizer(validation_SMILES)
-    train_labels = np.array(train_G_atomization)
-    validation_labels = np.array(validation_G_atomization)
+    layer = layers.TextVectorization().adapt(features_list)
+    features_layer = layer(features_list)
+    labels_array = np.array(labels_list)
+    return model.fit(features_layer, labels_array).history["loss"]
 SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
 writelist("model/SMILES.txt", SMILES)
 writelist("model/G_atomization.txt", G_atomization)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
-plt.plot(train_G_atomization, label="Train")
-plt.plot(test_G_atomization, label="Test")
-plt.plot(validation_G_atomization, label="Validation")
+plt.plot(fitmodel(compilemodel(), train_SMILES, train_G_atomization), label="Train")
+plt.plot(fitmodel(compilemodel(), test_SMILES, test_G_atomization), label="Test")
+plt.plot(fitmodel(compilemodel(), validation_SMILES, validation_G_atomization), label="Validation")
 plt.title("THIS IS A TEST")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
