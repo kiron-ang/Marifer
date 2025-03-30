@@ -30,7 +30,7 @@ def returnmodel(string_list, float_list):
         tf.keras.layers.Dense(1)
     ])
     model.compile(loss="huber")
-    return model.fit(np.array(string_list), np.array(float_list))
+    return model.fit(np.array(string_list, dtype=object), np.array(float_list))
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
