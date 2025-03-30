@@ -1,5 +1,4 @@
 """This module trains a model with data from the "data" directory"""
-import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 def readlines(path):
@@ -31,11 +30,11 @@ def returnmodel(string_list, float_list):
     ])
     model.compile(loss="huber")
     print("CONVERTING STRING")
-    string_array = np.array(string_list)
+    string_tensor = tf.constant(string_list)
     print("CONVERTING FLOAT")
-    float_array = np.array(float_list)
+    float_tensor = tf.constant(float_list)
     print("FIT MODEL")
-    return model.fit(string_array, float_array)
+    return model.fit(string_tensor, float_tensor)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
