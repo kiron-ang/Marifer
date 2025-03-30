@@ -1,7 +1,6 @@
 """
 This module loads the QM9/DimeNet dataset and creates .txt files from its features.
 """
-import os
 import tensorflow_datasets as tfds
 def txt(config):
     """
@@ -19,7 +18,6 @@ def txt(config):
                     is created in the 'data' directory. The files are named in the format
                     '{split}-{feature}.txt' and contain the feature values, one per line.
     """
-    os.makedirs("data", exist_ok=True)
     dataset = tfds.load(config)
     for split in dataset:
         d = next(iter(dataset[split]))

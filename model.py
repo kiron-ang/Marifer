@@ -1,5 +1,4 @@
 """???"""
-import tensorflow as tf
 from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, TimeDistributed
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -17,7 +16,7 @@ def load_smiles(file_path):
     Returns:
         list: A list of SMILES strings.
     """
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding="utf-8") as file:
         smiles = file.readlines()
     return [s.strip() for s in smiles]
 
@@ -29,7 +28,7 @@ def save_smiles(file_path, smiles):
         file_path (str): The path to the output file.
         smiles (list): A list of SMILES strings to save.
     """
-    with open(file_path, 'w') as file:
+    with open(file_path, 'w', encoding="utf-8") as file:
         for s in smiles:
             file.write(f"{s}\n")
 
@@ -103,12 +102,12 @@ def main():
     smiles = load_smiles('data/train-SMILES.txt')
     tokenizer = Tokenizer(char_level=True, oov_token='')
     tokenizer.fit_on_texts(smiles)
-    max_length = max([len(s) for s in smiles])
+    max_length = max(len(s) for s in smiles)
     vocab_size = len(tokenizer.word_index) + 1
-    
+
     x = preprocess_smiles(smiles, tokenizer, max_length)
     y = np.expand_dims(x, -1)
-    
+
     model = build_model(vocab_size, max_length)
     plt.figure()
     plt.plot(model.fit(x, y, epochs=50, batch_size=32).history["loss"])
@@ -117,7 +116,7 @@ def main():
     plt.savefig("model/loss-epoch.png")
     plt.close()
     generated_smiles = generate_smiles(model, tokenizer, max_length, 1000)
-        
+
     save_smiles('model/SMILES.txt', generated_smiles)
 
 if __name__ == '__main__':
