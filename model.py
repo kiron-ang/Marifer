@@ -1,8 +1,8 @@
 """This module trains a model with data from the "data" directory"""
 import matplotlib.pyplot as plt
 from rdkit import Chem
-from tensorflow.keras import layers, models
 import numpy as np
+import tensorflow as tf
 def readlines(path):
     """Read file from path and return a list of lines"""
     with open(path, "r", encoding="utf-8") as f:
@@ -21,13 +21,13 @@ test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
 def model(string_list, float_list):
     """Compile and fit a new Sequential model"""
-    text_vectorization_layer = layers.TextVectorization()
-    text_vectorization_layer.adapt(string_list)
-    model = models.Sequential([
+    text_vectorization_layer = tf.keras.layers.TextVectorization()
+    text_vectorization_layer.adapt(tf.data.Dataset.from_tensor_slices(string_list))
+    model = tf.keras.models.Sequential([
         text_vectorization_layer,
-        layers.Embedding(28, 28),
-        layers.LSTM(28),
-        layers.Dense(28)
+        tf.keras.layers.Embedding(28, 28),
+        tf.keras.layers.LSTM(28),
+        tf.keras.layers.Dense(28)
     ])
     model.compile()
     return model.fit(string_list, float_list).history["loss"]
