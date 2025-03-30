@@ -33,7 +33,7 @@ def returnmodel(string_list, float_list):
     model.compile(loss="huber")
     string_tensor = tf.constant(string_list)
     float_tensor = tf.constant(float_list)
-    return model.fit(x=tf.data.Dataset.from_tensor_slices((string_tensor, float_tensor)), epochs=10)
+    return model.fit(tf.data.Dataset.from_tensor_slices((string_tensor, float_tensor)).batch(100), epochs=10)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
