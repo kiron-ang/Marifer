@@ -24,7 +24,9 @@ model = models.Sequential([
     layers.Embedding(28, 28),
     layers.LSTM(28),
     layers.Dense(28)
-]).compile()
+])
+model.compile()
+print(model)
 
 SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
@@ -32,9 +34,9 @@ writelist("model/SMILES.txt", SMILES)
 writelist("model/G_atomization.txt", G_atomization)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
-plt.plot(train_G_atomization)
-plt.plot(test_G_atomization)
-plt.plot(validation_G_atomization)
+plt.plot(train_G_atomization, "Train")
+plt.plot(test_G_atomization, "Test")
+plt.plot(validation_G_atomization, "Validation")
 plt.title("THIS IS A TEST")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
