@@ -1,4 +1,5 @@
 """This module trains a model with data from the "data" directory"""
+import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 def readlines(path):
@@ -29,7 +30,7 @@ def returnmodel(string_list, float_list):
         tf.keras.layers.Dense(1)
     ])
     model.compile(loss="huber")
-    return model.fit(tf.constant(string_list), tf.constant(float_list))
+    return model.fit(np.array(string_list), np.array(float_list))
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
