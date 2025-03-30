@@ -1,8 +1,7 @@
 """This module trains a model with data from the "data" directory"""
-import matplotlib.pyplot as plt
-from rdkit import Chem
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 def readlines(path):
     """Read file from path and return a list of lines"""
     with open(path, "r", encoding="utf-8") as f:
@@ -25,7 +24,7 @@ def model(string_list, float_list):
     float_dataset = tf.data.Dataset.from_tensor_slices(float_list)
     text_vectorization_layer = tf.keras.layers.TextVectorization()
     text_vectorization_layer.adapt(string_dataset)
-    units = text_vectorization_layer.get_vocabulary()
+    units = len(text_vectorization_layer.get_vocabulary())
     model = tf.keras.models.Sequential([
         text_vectorization_layer,
         tf.keras.layers.Embedding(units, units),
@@ -34,16 +33,11 @@ def model(string_list, float_list):
     ])
     model.compile()
     return model.fit(tf.data.Dataset.zip(string_dataset, float_dataset)).history["loss"]
-SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
-G_atomization = train_G_atomization
-writelist("model/SMILES.txt", SMILES)
-writelist("model/G_atomization.txt", G_atomization)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(model(train_SMILES, train_G_atomization), label="Train")
 plt.plot(model(test_SMILES, test_G_atomization), label="Test")
 plt.plot(model(validation_SMILES, validation_G_atomization), label="Validation")
-plt.title("THIS IS A TEST")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
