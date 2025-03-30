@@ -1,2 +1,2 @@
-"""Analyze the results given by the model"""
+"""This module analyzes files from the "model" directory."""
 print("hi")

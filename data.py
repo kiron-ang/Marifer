@@ -1,6 +1,4 @@
-"""
-This module loads a Tensorflow dataset and creates .txt files from its features.
-"""
+"""This module converts the QM9 dataset into .txt files."""
 import tensorflow_datasets as tfds
 def txt(config):
     """
