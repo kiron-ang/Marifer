@@ -29,15 +29,12 @@ def returnmodel(string_list, float_list):
         tf.keras.layers.Dense(1)
     ])
     model.compile(loss="huber")
-    print("CONVERTING STRING")
     string_tensor = tf.constant(string_list)
-    print("CONVERTING FLOAT")
     float_tensor = tf.constant(float_list)
-    print("FIT MODEL")
-    return model.fit(string_tensor, float_tensor)
+    return model.fit(tf.data.Dataset.from_tensor_slices((string_tensor, float_tensor)).batch(100))
 plt.rcParams["font.family"] = "serif"
 plt.figure()
-# plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
+plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
 plt.plot(returnmodel(test_SMILES, test_G_atomization).history["loss"], label="Test")
 plt.plot(returnmodel(validation_SMILES, validation_G_atomization).history["loss"],
             label="Validation")
