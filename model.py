@@ -34,9 +34,9 @@ def returnmodel(string_list, float_list):
     return model.fit(tf.data.Dataset.zip((string_dataset, float_dataset)))
 plt.rcParams["font.family"] = "serif"
 plt.figure()
-plt.plot(model(train_SMILES, train_G_atomization).history["loss"], label="Train")
-plt.plot(model(test_SMILES, test_G_atomization).history["loss"], label="Test")
-plt.plot(model(validation_SMILES, validation_G_atomization).history["loss"], label="Validation")
+plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
+plt.plot(returnmodel(test_SMILES, test_G_atomization).history["loss"], label="Test")
+plt.plot(returnmodel(validation_SMILES, validation_G_atomization).history["loss"], label="Validation")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
