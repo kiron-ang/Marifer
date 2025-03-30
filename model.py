@@ -10,21 +10,22 @@ def writelist(path, list0):
     """Write file at path, where every line is an element from a list"""
     with open(path, "w", encoding="utf-8") as f:
         for l in list0:
-            f.write(l + "\n")
-train_smiles = readlines("data/train-SMILES.txt")
-test_smiles = readlines("data/test-SMILES.txt")
-validation_smiles = readlines("data/validation-SMILES.txt")
-train_g_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
-test_g_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
-validation_g_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
-smiles = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_smiles]
-writelist("model/SMILES.txt", smiles)
+            f.write(str(l) + "\n")
+train_SMILES = readlines("data/train-SMILES.txt")
+test_SMILES = readlines("data/test-SMILES.txt")
+validation_SMILES = readlines("data/validation-SMILES.txt")
+train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
+test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
+validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
+SMILES = [Chem.MolToSMILES(Chem.MolFromSMILES(s)) for s in train_SMILES]
+G_atomization = train_G_atomization
+writelist("model/SMILES.txt", SMILES)
+writelist("model/G_atomization.txt", G_atomization)
 plt.rcParams["font.family"] = "serif"
-plt.rcParams["font.size"] = 20
 plt.figure()
-plt.plot(train_g_atomization)
-plt.plot(test_g_atomization)
-plt.plot(validation_g_atomization)
+plt.plot(train_G_atomization)
+plt.plot(test_G_atomization)
+plt.plot(validation_G_atomization)
 plt.title("THIS IS A TEST")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
