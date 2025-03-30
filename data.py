@@ -1,5 +1,5 @@
 """
-This module loads the QM9/DimeNet dataset and creates .txt files from its features.
+This module loads a Tensorflow dataset and creates .txt files from its features.
 """
 import tensorflow_datasets as tfds
 def txt(config):
