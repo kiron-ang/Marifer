@@ -29,11 +29,12 @@ def returnmodel(string_list, float_list):
         tf.keras.layers.LSTM(units),
         tf.keras.layers.Dense(1)
     ])
+    model.compile(loss="huber")
     print("CONVERTING STRING")
     string_array = np.array(string_list)
     print("CONVERTING FLOAT")
     float_array = np.array(float_list)
-    model.compile(loss="huber")
+    print("FIT MODEL")
     return model.fit(string_array, float_array)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
