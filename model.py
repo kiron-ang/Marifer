@@ -31,16 +31,27 @@ def returnmodel(string_list, float_list):
     model.compile(loss="huber")
     string_tensor = tf.constant(string_list)
     float_tensor = tf.constant(float_list)
-    return model.fit(tf.data.Dataset.from_tensor_slices((string_tensor, float_tensor)).batch(1000),
-                        epochs=10)
+    history = model.fit(tf.data.Dataset.from_tensor_slices((string_tensor,
+                            float_tensor)).batch(1000),epochs=10)
+    return model, history
+trainmodel, trainmodel_history = returnmodel(train_SMILES, train_G_atomization)
+testmodel, testmodel_history = returnmodel(test_SMILES, test_G_atomization)
+validationmodel, validationmodel_history = returnmodel(validation_SMILES, validation_G_atomization)
 plt.rcParams["font.family"] = "serif"
 plt.figure()
-plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
-plt.plot(returnmodel(test_SMILES, test_G_atomization).history["loss"], label="Test")
-plt.plot(returnmodel(validation_SMILES, validation_G_atomization).history["loss"],
-            label="Validation")
+plt.plot(trainmodel_history.history["loss"], label="Train")
+plt.plot(testmodel_history.history["loss"], label="Test")
+plt.plot(validationmodel_history.history["loss"], label="Validation")
 plt.title("Fitting Model to 3 Different Splits")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
 plt.legend()
 plt.savefig("model/loss-epoch.png")
+plt.close()
+trainmodel.save("model/trainmodel.h5")
+train_predictions = trainmodel.predict(tf.constant(train_SMILES))
+test_predictions = trainmodel.predict(tf.constant(test_SMILES))
+validation_predictions = trainmodel.predict(tf.constant(validation_SMILES))
+writelist("model/train-G_atomization.txt", train_predictions)
+writelist("model/test-G_atomization.txt", test_predictions)
+writelist("model/validation-G_atomization.txt", validation_predictions)
