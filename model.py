@@ -12,20 +12,17 @@ def writelist(path, list0):
     with open(path, "w", encoding="utf-8") as f:
         for l in list0:
             f.write(str(l) + "\n")
-train_SMILES = readlines("data/train-SMILES.txt")
-test_SMILES = readlines("data/test-SMILES.txt")
-validation_SMILES = readlines("data/validation-SMILES.txt")
+train_SMILES = readlines("data/train-SMILES.txt") # The longest SMILES string has 28 characters
+test_SMILES = readlines("data/test-SMILES.txt") # 26 characters
+validation_SMILES = readlines("data/validation-SMILES.txt") # 27 characters
 train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
 test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
-print("Longest string in train Smiles", max(len(s) for s in train_SMILES))
-print("Longest string in test Smiles", max(len(s) for s in test_SMILES))
-print("Longest string in validation Smiles", max(len(s) for s in validation_SMILES))
 
 model = models.Sequential([
     layers.TextVectorization(),
-    layers.Embedding(100, 100),
-    layers.LSTM(),
+    layers.Embedding(28, 28),
+    layers.LSTM(28),
     layers.Dense()
 ])
 
