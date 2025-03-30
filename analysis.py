@@ -1,2 +1,2 @@
-"""This module analyzes files from the "model" directory."""
+"""This module analyzes files from the "model" directory"""
 print("hi")
