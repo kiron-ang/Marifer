@@ -18,9 +18,9 @@ train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt
 test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
 def returnmodel(string_list, float_list):
-    string_list = string_list[0:100]
-    float_list = float_list[0:100]
     """Define, compile, fit, and return a new Sequential model"""
+    string_list = string_list[0:1000]
+    float_list = float_list[0:1000]
     text_vectorization_layer = tf.keras.layers.TextVectorization()
     text_vectorization_layer.adapt(string_list)
     units = len(text_vectorization_layer.get_vocabulary())
