@@ -23,8 +23,8 @@ model = models.Sequential([
     layers.TextVectorization(),
     layers.Embedding(28, 28),
     layers.LSTM(28),
-    layers.Dense()
-])
+    layers.Dense(28)
+]).compile()
 
 SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
