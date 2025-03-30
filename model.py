@@ -25,14 +25,15 @@ def model(string_list, float_list):
     float_dataset = tf.data.Dataset.from_tensor_slices(float_list)
     text_vectorization_layer = tf.keras.layers.TextVectorization()
     text_vectorization_layer.adapt(string_dataset)
+    units = text_vectorization_layer.get_vocabulary()
     model = tf.keras.models.Sequential([
         text_vectorization_layer,
-        tf.keras.layers.Embedding(28, 28),
-        tf.keras.layers.LSTM(28),
-        tf.keras.layers.Dense(28)
+        tf.keras.layers.Embedding(units, units),
+        tf.keras.layers.LSTM(units),
+        tf.keras.layers.Dense(units)
     ])
     model.compile()
-    return model.fit(string_dataset, float_dataset).history["loss"]
+    return model.fit(tf.data.Dataset.zip(string_dataset, float_dataset)).history["loss"]
 SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
 writelist("model/SMILES.txt", SMILES)
