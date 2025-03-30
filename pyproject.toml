@@ -1,7 +1,7 @@
 [project]
 name = "Marifer"
-version = "0.0.1"
-description = "Molecule Generation!"
+version = "0.0.2"
+description = "Please read readme.md and license.txt!"
 requires-python = "==3.12.9"
 dependencies = [
     "apache-beam",
