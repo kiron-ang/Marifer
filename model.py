@@ -19,10 +19,8 @@ test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
 def returnmodel(string_list, float_list):
     """Define, compile, fit, and return a new Sequential model"""
-    string_dataset = tf.data.Dataset.from_tensor_slices(string_list)
-    float_dataset = tf.data.Dataset.from_tensor_slices(float_list)
     text_vectorization_layer = tf.keras.layers.TextVectorization()
-    text_vectorization_layer.adapt(string_dataset)
+    text_vectorization_layer.adapt(string_list)
     units = len(text_vectorization_layer.get_vocabulary())
     model = tf.keras.models.Sequential([
         text_vectorization_layer,
@@ -31,12 +29,12 @@ def returnmodel(string_list, float_list):
         tf.keras.layers.Dense(units)
     ])
     model.compile()
-    return model.fit(tf.data.Dataset.zip((string_dataset, float_dataset)))
+    return model.fit(tf.constant(string_list), tf.constant(float_list))
 plt.rcParams["font.family"] = "serif"
 plt.figure()
 plt.plot(returnmodel(train_SMILES, train_G_atomization).history["loss"], label="Train")
 plt.plot(returnmodel(test_SMILES, test_G_atomization).history["loss"], label="Test")
-plt.plot(returnmodel(validation_SMILES, validation_G_atomization).history["loss"], 
+plt.plot(returnmodel(validation_SMILES, validation_G_atomization).history["loss"],
             label="Validation")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
