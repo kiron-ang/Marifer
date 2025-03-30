@@ -21,7 +21,8 @@ test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
 def model(string_list, float_list):
     """Compile and fit a new Sequential model"""
-    text_vectorization_layer = layers.TextVectorization().adapt(string_list)
+    text_vectorization_layer = layers.TextVectorization()
+    text_vectorization_layer.adapt(string_list)
     model = models.Sequential([
         text_vectorization_layer,
         layers.Embedding(28, 28),
