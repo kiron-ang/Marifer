@@ -10,7 +10,7 @@ def writelist(path, list0):
     """Write file at path, where every line is an element from a list"""
     with open(path, "w", encoding="utf-8") as f:
         for l in list0:
-            f.write(l, "\n")
+            f.write(l + "\n")
 train_smiles = readlines("data/train-SMILES.txt")
 test_smiles = readlines("data/test-SMILES.txt")
 validation_smiles = readlines("data/validation-SMILES.txt")
