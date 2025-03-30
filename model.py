@@ -20,7 +20,6 @@ validation_g_atomization = [float(r) for r in readlines("data/validation-G_atomi
 smiles = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_smiles]
 writelist("model/SMILES.txt", smiles)
 plt.rcParams["font.family"] = "serif"
-plt.rcParams["font.serif"] = "Times New Roman"
 plt.rcParams["font.size"] = 20
 plt.figure()
 plt.plot(train_g_atomization)
