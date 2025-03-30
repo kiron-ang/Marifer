@@ -17,6 +17,7 @@ validation_SMILES = readlines("data/validation-SMILES.txt")
 train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
 test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
+
 SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
 writelist("model/SMILES.txt", SMILES)
@@ -29,4 +30,5 @@ plt.plot(validation_G_atomization)
 plt.title("THIS IS A TEST")
 plt.ylabel("Loss")
 plt.xlabel("Epoch")
+plt.legend()
 plt.savefig("model/loss-epoch.png")
