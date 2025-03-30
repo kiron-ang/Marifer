@@ -17,7 +17,7 @@ validation_SMILES = readlines("data/validation-SMILES.txt")
 train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
 test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
-SMILES = [Chem.MolToSMILES(Chem.MolFromSMILES(s)) for s in train_SMILES]
+SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
 writelist("model/SMILES.txt", SMILES)
 writelist("model/G_atomization.txt", G_atomization)
