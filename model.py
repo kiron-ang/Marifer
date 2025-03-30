@@ -1,4 +1,4 @@
-"""???"""
+"""Train a model with LSTM layers!"""
 from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, TimeDistributed
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -16,7 +16,7 @@ def load_smiles(file_path):
     Returns:
         list: A list of SMILES strings.
     """
-    with open(file_path, 'r', encoding="utf-8") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         smiles = file.readlines()
     return [s.strip() for s in smiles]
 
@@ -28,7 +28,7 @@ def save_smiles(file_path, smiles):
         file_path (str): The path to the output file.
         smiles (list): A list of SMILES strings to save.
     """
-    with open(file_path, 'w', encoding="utf-8") as file:
+    with open(file_path, "w", encoding="utf-8") as file:
         for s in smiles:
             file.write(f"{s}\n")
 
@@ -45,7 +45,7 @@ def preprocess_smiles(smiles, tokenizer, max_length):
         numpy.ndarray: Padded sequences.
     """
     sequences = tokenizer.texts_to_sequences(smiles)
-    padded_sequences = pad_sequences(sequences, maxlen=max_length, padding='post', value=0)
+    padded_sequences = pad_sequences(sequences, maxlen=max_length, padding="post", value=0)
     return padded_sequences
 
 def build_model(vocab_size, max_length):
@@ -63,9 +63,9 @@ def build_model(vocab_size, max_length):
     x = Embedding(input_dim=vocab_size, output_dim=256)(inputs)
     x = LSTM(256, return_sequences=True)(x)
     x = LSTM(256, return_sequences=True)(x)
-    outputs = TimeDistributed(Dense(vocab_size, activation='softmax'))(x)
+    outputs = TimeDistributed(Dense(vocab_size, activation="softmax"))(x)
     model = Model(inputs, outputs)
-    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy")
     return model
 
 def generate_smiles(model, tokenizer, max_length, num_smiles):
@@ -92,15 +92,15 @@ def generate_smiles(model, tokenizer, max_length, num_smiles):
                 break
             generated_smiles.append(next_token)
             input_seq[0, i] = next_token
-        smiles.append(''.join(tokenizer.sequences_to_texts([generated_smiles])[0]))
+        smiles.append("".join(tokenizer.sequences_to_texts([generated_smiles])[0]))
     return smiles
 
 def main():
     """
     Main function to load data, train the model, and generate new SMILES strings.
     """
-    smiles = load_smiles('data/train-SMILES.txt')
-    tokenizer = Tokenizer(char_level=True, oov_token='')
+    smiles = load_smiles("data/train-SMILES.txt")
+    tokenizer = Tokenizer(char_level=True, oov_token="")
     tokenizer.fit_on_texts(smiles)
     max_length = max(len(s) for s in smiles)
     vocab_size = len(tokenizer.word_index) + 1
@@ -110,14 +110,14 @@ def main():
 
     model = build_model(vocab_size, max_length)
     plt.figure()
-    plt.plot(model.fit(x, y, epochs=50, batch_size=32).history["loss"])
+    plt.plot(model.fit(x, y, epochs=10, batch_size=32).history["loss"])
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.savefig("model/loss-epoch.png")
     plt.close()
     generated_smiles = generate_smiles(model, tokenizer, max_length, 1000)
 
-    save_smiles('model/SMILES.txt', generated_smiles)
+    save_smiles("model/SMILES.txt", generated_smiles)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
