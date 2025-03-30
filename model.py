@@ -4,12 +4,12 @@ from rdkit import Chem
 def readlines(path):
     """Read file from path and return a list of lines"""
     with open(path, "r", encoding="utf-8") as f:
-        readlines = [line.strip() for line in f.readlines()]
-    return readlines
-def writelist(path, list):
+        lines = [line.strip() for line in f.readlines()]
+    return lines
+def writelist(path, list0):
     """Write file at path, where every line is an element from a list"""
     with open(path, "w", encoding="utf-8") as f:
-        for l in list:
+        for l in list0:
             f.write(l, "\n")
 train_smiles = readlines("data/train-SMILES.txt")
 test_smiles = readlines("data/test-SMILES.txt")
