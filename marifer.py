@@ -1,4 +1,4 @@
-"""Generate molecules!"""
+"""This module handles the main control flow by executing the other modules."""
 import os
 import subprocess
 os.makedirs("data", exist_ok=True)

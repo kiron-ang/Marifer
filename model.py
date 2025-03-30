@@ -1,6 +1,7 @@
 """This module trains a model with data from the "data" directory."""
 import matplotlib.pyplot as plt
 from rdkit import Chem
+from tensorflow.keras import layers, models
 def readlines(path):
     """Read file from path and return a list of lines"""
     with open(path, "r", encoding="utf-8") as f:
@@ -17,6 +18,13 @@ validation_SMILES = readlines("data/validation-SMILES.txt")
 train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
 test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
+
+model = models.Sequential([
+    layers.TextVectorization(),
+    layers.Embedding(),
+    layers.LSTM(),
+    layers.Dense()
+])
 
 SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
