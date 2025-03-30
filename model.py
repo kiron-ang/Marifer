@@ -21,8 +21,10 @@ test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")
 validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
 def model(string_list, float_list):
     """Compile and fit a new Sequential model"""
+    string_dataset = tf.data.Dataset.from_tensor_slices(string_list)
+    float_dataset = tf.data.Dataset.from_tensor_slices(float_list)
     text_vectorization_layer = tf.keras.layers.TextVectorization()
-    text_vectorization_layer.adapt(tf.data.Dataset.from_tensor_slices(string_list))
+    text_vectorization_layer.adapt(string_dataset)
     model = tf.keras.models.Sequential([
         text_vectorization_layer,
         tf.keras.layers.Embedding(28, 28),
@@ -30,7 +32,7 @@ def model(string_list, float_list):
         tf.keras.layers.Dense(28)
     ])
     model.compile()
-    return model.fit(string_list, float_list).history["loss"]
+    return model.fit(string_dataset, float_dataset).history["loss"]
 SMILES = [Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in train_SMILES]
 G_atomization = train_G_atomization
 writelist("model/SMILES.txt", SMILES)
