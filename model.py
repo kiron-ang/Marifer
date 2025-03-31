@@ -25,7 +25,6 @@ def saveplot(metric, history, feature_name):
     plt.legend()
     plt.savefig(f"model/{metric}-{feature_name}.png")
     plt.close()
-
 def stringfloatmodel(feature_name):
     """Compiles, fits, and trains a model designed to predict a float target from string input"""
     train_smiles = readlines("data/train-SMILES.txt") # Longest string is 28 characters
@@ -99,6 +98,6 @@ qm9_features = {
     "tag": "string",
     "zpve": "float32",
 }
-for feature in qm9_features:
-    if qm9_features[feature] == "float32":
+for feature, dtype in qm9_features.items():
+    if dtype == "float32":
         stringfloatmodel(feature)
