@@ -1,3 +1,3 @@
-"""This module analyzes files from the "model" directory"""
+"""analysis.py"""
 import rdkit
 print(rdkit.__version__)

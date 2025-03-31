@@ -1,4 +1,4 @@
-"""This module trains a model with data from the "data" directory"""
+"""model.py"""
 import tensorflow as tf
 import matplotlib.pyplot as plt
 def readlines(path):
@@ -11,72 +11,115 @@ def writelist(path, list0):
     with open(path, "w", encoding="utf-8") as f:
         for l in list0:
             f.write(str(l) + "\n")
-train_SMILES = readlines("data/train-SMILES.txt") # Longest string is 28 characters
-test_SMILES = readlines("data/test-SMILES.txt") # Longest string is 26 characters
-validation_SMILES = readlines("data/validation-SMILES.txt") # Longest string is 27 characters
-train_G_atomization = [float(r) for r in readlines("data/train-G_atomization.txt")]
-test_G_atomization = [float(r) for r in readlines("data/test-G_atomization.txt")]
-validation_G_atomization = [float(r) for r in readlines("data/validation-G_atomization.txt")]
-text_vectorization_layer = tf.keras.layers.TextVectorization()
-text_vectorization_layer.adapt(train_SMILES)
-units = len(text_vectorization_layer.get_vocabulary())
-model = tf.keras.models.Sequential([
-    text_vectorization_layer,
-    tf.keras.layers.Embedding(units, units // 10),
-    tf.keras.layers.LSTM(units // 100),
-    tf.keras.layers.Dense(1)
-])
-model.compile(
-    loss="huber",
-    metrics=["mae", "mape", "mse", "msle"])
-history = model.fit(
-    tf.data.Dataset.from_tensor_slices((
-        tf.constant(train_SMILES), tf.constant(train_G_atomization))).batch(1000),
-    epochs=10,
-    validation_data=(tf.constant(validation_SMILES), tf.constant(validation_G_atomization))
-)
-plt.rcParams["font.family"] = "serif"
-plt.figure()
-plt.plot(history.history["loss"], label="Training Data")
-plt.plot(history.history["val_loss"], label="Validation Data")
-plt.ylabel("Loss")
-plt.xlabel("Epoch")
-plt.savefig("model/loss-epoch.png")
-plt.close()
-plt.figure()
-plt.plot(history.history["mae"], label="Training Data")
-plt.plot(history.history["val_mae"], label="Validation Data")
-plt.ylabel("MAE")
-plt.xlabel("Epoch")
-plt.savefig("model/mae-epoch.png")
-plt.close()
-plt.figure()
-plt.plot(history.history["mape"], label="Training Data")
-plt.plot(history.history["val_mape"], label="Validation Data")
-plt.ylabel("MAPE")
-plt.xlabel("Epoch")
-plt.savefig("model/mape-epoch.png")
-plt.close()
-plt.figure()
-plt.plot(history.history["mse"], label="Training Data")
-plt.plot(history.history["val_mse"], label="Validation Data")
-plt.ylabel("MSE")
-plt.xlabel("Epoch")
-plt.savefig("model/mse-epoch.png")
-plt.close()
-plt.figure()
-plt.plot(history.history["msle"], label="Training Data")
-plt.plot(history.history["val_msle"], label="Validation Data")
-plt.ylabel("MSLE")
-plt.xlabel("Epoch")
-plt.savefig("model/msle-epoch.png")
-plt.close()
-train_predictions = model.predict(tf.constant(train_SMILES))
-test_predictions = model.predict(tf.constant(test_SMILES))
-validation_predictions = model.predict(tf.constant(validation_SMILES))
-writelist("model/train-G_atomization.txt", [p[0] for p in train_predictions])
-writelist("model/test-G_atomization.txt", [p[0] for p in test_predictions])
-writelist("model/validation-G_atomization.txt", [p[0] for p in validation_predictions])
-with open("model/summary.txt", "w", encoding="utf-8") as summary:
-    model.summary(print_fn=lambda x: summary.write(x + "\n"))
-model.save("model/model.keras")
+qm9_features = {
+    "A": "float32",
+    "B": "float32",
+    "C": "float32",
+    "Cv": "float32",
+    "G": "float32",
+    "G_atomization": "float32",
+    "H": "float32",
+    "H_atomization": "float32",
+    "InChI": "string",
+    "InChI_relaxed": "string",
+    "Mulliken_charges": "Tensor(shape=(29,), dtype=float32)",
+    "SMILES": "string",
+    "SMILES_relaxed": "string",
+    "U": "float32",
+    "U0": "float32",
+    "U0_atomization": "float32",
+    "U_atomization": "float32",
+    "alpha": "float32",
+    "charges": "Tensor(shape=(29,), dtype=int64)",
+    "frequencies": "Tensor(shape=(None,), dtype=float32)",
+    "gap": "float32",
+    "homo": "float32",
+    "index": "int64",
+    "lumo": "float32",
+    "mu": "float32",
+    "num_atoms": "int64",
+    "positions": "Tensor(shape=(29, 3), dtype=float32)",
+    "r2": "float32",
+    "tag": "string",
+    "zpve": "float32",
+}
+def stringfloatmodel(feature_name):
+    """Compiles, fits, and trains a model designed to predict a float target from string input"""
+    train_SMILES = readlines("data/train-SMILES.txt") # Longest string is 28 characters
+    test_SMILES = readlines("data/test-SMILES.txt") # Longest string is 26 characters
+    validation_SMILES = readlines("data/validation-SMILES.txt") # Longest string is 27 characters
+    train_feature_name = [float(r) for r in readlines(f"data/train-{feature_name}.txt")]
+    test_feature_name = [float(r) for r in readlines(f"data/test-{feature_name}.txt")]
+    validation_feature_name = [float(r) for r in readlines(f"data/validation-{feature_name}.txt")]
+    text_vectorization_layer = tf.keras.layers.TextVectorization()
+    text_vectorization_layer.adapt(train_SMILES)
+    units = len(text_vectorization_layer.get_vocabulary())
+    model = tf.keras.models.Sequential([
+        text_vectorization_layer,
+        tf.keras.layers.Embedding(units, units // 1000),
+        tf.keras.layers.LSTM(units // 1000),
+        tf.keras.layers.Dropout(0.5)
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(
+        loss="huber",
+        metrics=["mae", "mape", "mse", "msle"])
+    history = model.fit(
+        tf.data.Dataset.from_tensor_slices((
+            tf.constant(train_SMILES), tf.constant(train_feature_name))).batch(1000),
+        epochs=10,
+        validation_data=(tf.constant(validation_SMILES), tf.constant(validation_feature_name))
+    )
+    plt.rcParams["font.family"] = "serif"
+    plt.figure()
+    plt.plot(history.history["loss"], label="Training Data")
+    plt.plot(history.history["val_loss"], label="Validation Data")
+    plt.ylabel("Loss")
+    plt.xlabel("Epoch")
+    plt.legend()
+    plt.savefig(f"model/loss-{feature_name}.png")
+    plt.close()
+    plt.figure()
+    plt.plot(history.history["mae"], label="Training Data")
+    plt.plot(history.history["val_mae"], label="Validation Data")
+    plt.ylabel("MAE")
+    plt.xlabel("Epoch")
+    plt.legend()
+    plt.savefig(f"model/mae-{feature_name}.png")
+    plt.close()
+    plt.figure()
+    plt.plot(history.history["mape"], label="Training Data")
+    plt.plot(history.history["val_mape"], label="Validation Data")
+    plt.ylabel("MAPE")
+    plt.xlabel("Epoch")
+    plt.legend()
+    plt.savefig(f"model/mape-{feature_name}.png")
+    plt.close()
+    plt.figure()
+    plt.plot(history.history["mse"], label="Training Data")
+    plt.plot(history.history["val_mse"], label="Validation Data")
+    plt.ylabel("MSE")
+    plt.xlabel("Epoch")
+    plt.legend()
+    plt.savefig(f"model/mse-{feature_name}.png")
+    plt.close()
+    plt.figure()
+    plt.plot(history.history["msle"], label="Training Data")
+    plt.plot(history.history["val_msle"], label="Validation Data")
+    plt.ylabel("MSLE")
+    plt.xlabel("Epoch")
+    plt.legend()
+    plt.savefig(f"model/msle-{feature_name}.png")
+    plt.close()
+    train_predictions = model.predict(tf.constant(train_SMILES))
+    test_predictions = model.predict(tf.constant(test_SMILES))
+    validation_predictions = model.predict(tf.constant(validation_SMILES))
+    writelist(f"model/train-{feature_name}.txt", [p[0] for p in train_predictions])
+    writelist(f"model/test-{feature_name}.txt", [p[0] for p in test_predictions])
+    writelist(f"model/validation-{feature_name}.txt", [p[0] for p in validation_predictions])
+    with open(f"model/summary-{feature_name}.txt", "w", encoding="utf-8") as summary:
+        model.summary(print_fn=lambda x: summary.write(x + "\n"))
+    model.save(f"model/model-{feature_name}.keras")
+for feature in qm9_features.keys():
+    if qm9_features[feature] == "float32":
+        stringfloatmodel(feature)
