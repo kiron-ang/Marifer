@@ -58,7 +58,7 @@ def stringfloatmodel(feature_name):
         text_vectorization_layer,
         tf.keras.layers.Embedding(units, units // 1000),
         tf.keras.layers.LSTM(units // 1000),
-        tf.keras.layers.Dropout(0.5)
+        tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(1)
     ])
     model.compile(
