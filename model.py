@@ -77,6 +77,6 @@ validation_predictions = model.predict(tf.constant(validation_SMILES))
 writelist("model/train-G_atomization.txt", [p[0] for p in train_predictions])
 writelist("model/test-G_atomization.txt", [p[0] for p in test_predictions])
 writelist("model/validation-G_atomization.txt", [p[0] for p in validation_predictions])
-with open("model/summary.txt", "w", encoding="utf-8") as f:
-    model.summary(print_fn=lambda x: f.write(x + "\n"))
+with open("model/summary.txt", "w", encoding="utf-8") as summary:
+    model.summary(print_fn=lambda x: summary.write(x + "\n"))
 model.save("model/model.keras")
