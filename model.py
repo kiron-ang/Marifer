@@ -15,8 +15,8 @@ def saveplot(metric, history, feature_name):
     """Plot metrics from stringfloatmodel()"""
     plt.rcParams["font.family"] = "serif"
     plt.figure()
-    plt.plot(history.history[metric], label="Training Data")
-    plt.plot(history.history["val_" + metric], label="Validation Data")
+    plt.plot(history.history[metric], label="Training Set")
+    plt.plot(history.history["val_" + metric], label="Validation Set")
     if metric == "loss":
         plt.ylabel("Loss")
     else:
