@@ -38,9 +38,9 @@ def stringfloatmodel(feature_name):
     units = len(text_vectorization_layer.get_vocabulary())
     model = tf.keras.models.Sequential([
         text_vectorization_layer,
-        tf.keras.layers.Embedding(units, units // 1000),
-        tf.keras.layers.LSTM(units // 1000),
-        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Embedding(units, units // 10),
+        tf.keras.layers.LSTM(units // 100),
+        tf.keras.layers.Dropout(0.7),
         tf.keras.layers.Dense(1)
     ])
     model.compile(
@@ -49,8 +49,9 @@ def stringfloatmodel(feature_name):
     history = model.fit(
         tf.data.Dataset.from_tensor_slices((
             tf.constant(train_smiles), tf.constant(train_feature_name))).batch(1000),
-        epochs=10,
-        validation_data=(tf.constant(validation_smiles), tf.constant(validation_feature_name))
+        epochs=10000,
+        validation_data=(tf.constant(validation_smiles), tf.constant(validation_feature_name)),
+        callbacks=[tf.keras.callbacks.EarlyStopping()]
     )
     saveplot("loss", history, feature_name)
     saveplot("mae", history, feature_name)
@@ -65,6 +66,7 @@ def stringfloatmodel(feature_name):
     writelist(f"model/validation-{feature_name}.txt", [p[0] for p in validation_predictions])
     with open(f"model/summary-{feature_name}.txt", "w", encoding="utf-8") as summary:
         model.summary(print_fn=lambda x: summary.write(x + "\n"))
+        summary.write(f"Number of Epochs: {len(history.history["val_loss"])}")
     model.save(f"model/model-{feature_name}.keras")
 qm9_features = {
     "A": "float32",
