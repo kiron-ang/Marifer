@@ -39,7 +39,7 @@ def find_most_similar_molecules(fingerprints):
         most_similar_pairs.append((smiles1, most_similar_smiles, max_similarity))
     return most_similar_pairs
 
-def analyze_similarity(smiles_file, output_file):
+def analyze_similarity(smiles_file, output_file="analysis/similarity-results.csv"):
     """Analyze molecular similarity and save results to file"""
     smiles_list = read_smiles(smiles_file)
     fingerprints = calculate_fingerprints(smiles_list)
@@ -53,9 +53,4 @@ def analyze_similarity(smiles_file, output_file):
     print("Similarity analysis complete. Results saved to", output_file)
 
 if __name__ == "__main__":
-    # Define file paths
-    smiles_file = "data/test-SMILES.txt"
-    output_file = "analysis/similarity_results.csv"
-
-    # Perform similarity analysis
-    analyze_similarity(smiles_file, output_file)
+    analyze_similarity("data/train-SMILES.txt")
