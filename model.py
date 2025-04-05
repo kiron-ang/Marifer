@@ -27,11 +27,10 @@ def saveplot(metric, history, feature_name):
     plt.close()
 def stringfloatmodel(feature_name):
     """Compiles, fits, and trains a model designed to predict a float target from string input"""
-    train_smiles = readlines("data/train-SMILES.txt") # Longest string is 28 characters
-    test_smiles = readlines("data/test-SMILES.txt") # Longest string is 26 characters
-    validation_smiles = readlines("data/validation-SMILES.txt") # Longest string is 27 characters
+    train_smiles = readlines("data/train-SMILES.txt")
+    test_smiles = readlines("data/test-SMILES.txt")
+    validation_smiles = readlines("data/validation-SMILES.txt")
     train_feature_name = [float(r) for r in readlines(f"data/train-{feature_name}.txt")]
-    # test_feature_name = [float(r) for r in readlines(f"data/test-{feature_name}.txt")]
     validation_feature_name = [float(r) for r in readlines(f"data/validation-{feature_name}.txt")]
     text_vectorization_layer = tf.keras.layers.TextVectorization()
     text_vectorization_layer.adapt(train_smiles)
@@ -102,4 +101,5 @@ qm9_features = {
 }
 for feature, dtype in qm9_features.items():
     if dtype == "float32":
+        print(feature.upper())
         stringfloatmodel(feature)
