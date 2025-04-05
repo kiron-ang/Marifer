@@ -1,13 +1,13 @@
 [project]
 name = "Marifer"
-version = "0.0.2"
-description = "Please read readme.md and license.txt!"
+version = "0.0.3"
+description = "Machine Learning & Molecular Design"
 requires-python = "==3.12.9"
 dependencies = [
-    "apache-beam",
-    "matplotlib",
-    "mlcroissant",
-    "rdkit",
-    "tensorflow-cpu",
-    "tensorflow-datasets"
+    "apache-beam", # tfds build qm9/dimenet
+    "mlcroissant", # tfds build qm9/dimenet
+    "tensorflow-datasets", # tfds build qm9/dimenet, data.py
+    "matplotlib", # model.py
+    "tensorflow-cpu", # model.py
+    "rdkit" # analysis.py
 ]
